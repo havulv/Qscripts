@@ -31,7 +31,7 @@
         --And strict PEP-8 line compliance
 '''
 from pprint import pprint as pp
-from Func import Func
+from classes import Func
 import itertools, re
 import os
 
