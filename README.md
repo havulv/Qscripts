@@ -77,8 +77,15 @@ Grab the top 5 results from a google search of a {site} for a {topic} in the pas
 Go to a certain amount of links and then retrieve all the links on the page. Also optionally returns a simple regex query for the links scraped.
 
 #### TODO:
-    * Search for links recursively with a depth parameter
-    * Search for all links in the page instead of those under html 'a'
+  * Search for links recursively with a depth parameter
+  * Search for all links in the page instead of those under html 'a'
+
+## site_dscrp.py
+
+Grab a site's description as listed in the "description" or "og:description" tags.
+
+#### TODO
+  * Update to a consistent User-Agent and maybe implement some speedups
 
 Classes
 =======
