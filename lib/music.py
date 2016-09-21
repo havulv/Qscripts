@@ -23,7 +23,7 @@ log.basicConfig(level=log.DEBUG,filename=os.path.join(
 
 # Path for vlc media player. Swap with your favorite shit (ncmpcpp or whatever)
 # But don't forget to update the subprocess call
-VLC_PATH = os.path.normpath("C:\\Users\\sjr.john.andersen\\AppData\\"
+VLC_PATH = os.path.normpath(os.path.expanduser('~')+"\\AppData\\"
                                     "Local\\VLC\\vlc-2.2.4\\vlc.exe")
 SAVE_FILE = os.path.normpath(os.path.join(os.getcwd()+
                             os.path.normpath('/music/music_urls.log')))

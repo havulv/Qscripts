@@ -28,8 +28,9 @@ def main(uri=None, sco=None):
 
     req = requests.get(url)
 
-    while req.status_code == code:
-        print("Error still there")
+    while req.status_code != code:
+        print("Status Code: {0} is still there".format(
+                                                req.status_code))
         time.sleep(12)
         req = requests.get(url)
         if req.status_code == 504:
