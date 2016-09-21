@@ -1,5 +1,5 @@
 # Qscripts
-Quick scripts for productivity, data fetches, and tedious tasks. 
+Quick scripts for productivity, data fetches, and tedious tasks.
 
 Current Scripts
 ===============
@@ -8,14 +8,14 @@ Current Scripts
 
 An attempt to follow a strict adherence to PEP 8 that cuts every single line in a file into a length of 72 characters. Ignores words, punctuation, or anything that would actually be useful.
 
-#### TODO: 
+#### TODO:
   * Cut lines over full words and recognize the syntax of at least python.
 
 ## addDoc.py
 
 Looks over a file, pulls out functions and asks the user what they would like to write for documentation. This script runs under the assumption (the lofty assumption) that the user has read and understood the file s/he/it is adding documentation to. Does not support decorators or classes.
 
-#### TODO: 
+#### TODO:
   * Add support for decorators and classes.
   * Add a config file for custom definition of function documentation
 
@@ -50,7 +50,7 @@ Requires VLC. Looks for new posts on 2 subreddits and then shoves them into VLC 
 #### TODO:
   * Do some preprocessing so that VLC doesn't have to deal with trying to figure out if it should play music from an article
   * Add some configuration options to when the script does the querying
-  
+
 ## sw.py
 
 Kindly asks for some site statistics from similarweb.com for a specific site. Equivalent to visiting the webpage. Please don't abuse this.
@@ -63,7 +63,22 @@ Kindly asks for some site statistics from similarweb.com for a specific site. Eq
 Transform all of the white pixels in an image to transparent (Change the alpha values to 0) in a png. Far better results for larger images. Also uses the magic of PIL
 
 #### TODO:
-  Evaluate the accuracy with a negative of the image compared to the new image.
+  * Evaluate the accuracy with a negative of the image compared to the new image.
+
+## gheadlines.py
+
+Grab the top 5 results from a google search of a {site} for a {topic} in the past year. Returns only live urls, not the google cached results.
+
+#### TODO:
+  * Expand on what the user can display and maybe take in a generic query
+
+## link_get.py
+
+Go to a certain amount of links and then retrieve all the links on the page. Also optionally returns a simple regex query for the links scraped.
+
+#### TODO:
+    * Search for links recursively with a depth parameter
+    * Search for all links in the page instead of those under html 'a'
 
 Classes
 =======
