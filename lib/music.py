@@ -17,16 +17,21 @@ import requests, sys, os, time
 from bs4 import BeautifulSoup as bs
 
 # Logging in case a url isn't gotten got
-log.basicConfig(level=log.DEBUG,filename=os.path.join(
-                os.getcwd()+os.path.normpath("/music/music.log")),
+LOG_DIR = os.path.join(os.getcwd(), os.path.normpath("music/"))
+
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+logfile = open(os.path.join(LOG_DIR, "music.log"), 'a')
+logfile.close()
+
+log.basicConfig(level=log.DEBUG,filename=os.path.join(LOG_DIR, "music.log"),
                 format="%(asctime)s [%(levelname)s] --- %(message)s")
 
 # Path for vlc media player. Swap with your favorite shit (ncmpcpp or whatever)
 # But don't forget to update the subprocess call
 VLC_PATH = os.path.normpath(os.path.expanduser('~')+"\\AppData\\"
                                     "Local\\VLC\\vlc-2.2.4\\vlc.exe")
-SAVE_FILE = os.path.normpath(os.path.join(os.getcwd()+
-                            os.path.normpath('/music/music_urls.log')))
+SAVE_FILE = os.path.join(LOG_DIR, 'music_urls.log')
 
 def write_urls(func):
     def wrapper(*args, **kwargs):
