@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 '''
     A script to hit r/indieheads and then bounce back some urls to

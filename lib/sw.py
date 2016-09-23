@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 '''
     Scraper for similarweb so I don't have to go to the site every time

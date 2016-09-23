@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 '''
     Messy script pulled together in <10 minutes to check the status

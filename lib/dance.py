@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 from os import system,name
 from time import sleep
 from random import randint
