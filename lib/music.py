@@ -42,8 +42,6 @@ def write_urls(func):
         return music_urls
     return wrapper
 
-
-
 def key_quit(func):
     def wrapper(*args, **kwargs):
         try:
@@ -80,6 +78,7 @@ def music_urls(bs_obj):
         url = link.get('href')
         if "youtube.com" in url and "&" and url:
             pieces = url.split("?")
+            # Saves a little bit of computation by not making it a list
             url = pieces[0] + "?" + filter(lambda x: "v" in x,
                                 pieces[1].split("&")).__next__()
         if url not in old_links:
