@@ -43,6 +43,8 @@ def get_stats(req):
         site_stats[0] = int(float(site_stats[0][:-1])*(10**6))
     elif site_stats[0][-1] == 'K':
         site_stats[0] = int(float(site_stats[0][:-1])*(10**3))
+    else:
+        site_stats[0] = int(float(site_stats[0]))
     return site_stats
 
 def printer(site_list):
