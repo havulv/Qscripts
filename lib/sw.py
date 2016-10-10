@@ -16,23 +16,27 @@ def get_stats(req):
     soup = bs(req.text, 'html.parser')
     vals = soup.find_all('div', {'class' : 'engagementInfo-line'})
     site_stats = [] # type: list
-    for i in vals:
+    for tag in vals:
         try:
             site_stats.append(
-                i.find(
+                tag.find(
                     'span',
                     { 'class' :
-    'engagementInfo-value engagementInfo-value--large u-text-ellipsis'}
+                        'engagementInfo-valueNumber js-countValue'}
                     ).string
                 )
         except AttributeError:
             site_stats.append(
-                i.find(
+                tag.find(
                     'span',
                     { 'class' :
-                    'engagementInfo-value u-text-ellipsis'}
+                    'engagementInfo-value u-text-ellipsis js-countValue'}
                     ).string
                 )
+
+    # Could do a filter object here but there is no need for lazy evals
+    site_stats = ["N/A" if stat == None else stat for stat in tag]
+
     if site_stats[0][-1] == 'B':
         site_stats[0] = int(float(site_stats[0][:-1])*(10**9))
     elif site_stats[0][-1] == 'M':
