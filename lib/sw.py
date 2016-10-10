@@ -35,7 +35,7 @@ def get_stats(req):
                 )
 
     # Could do a filter object here but there is no need for lazy evals
-    site_stats = ["N/A" if stat == None else stat for stat in tag]
+    site_stats = [0.0 if stat == None else stat for stat in site_stats]
 
     if site_stats[0][-1] == 'B':
         site_stats[0] = int(float(site_stats[0][:-1])*(10**9))
