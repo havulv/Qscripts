@@ -2,14 +2,23 @@
 
 from bs4 import BeautifulSoup as bs
 import requests, sys
+from requests.exceptions import MissingSchema, ConnectionError
 
 def connection_errors(func):
     def wrap_request(*args, **kwargs):
         try:
             func_ret = func(*args, **kwargs)
-        except requests.exceptions.ConnectionError as e:
-            print("ConnectionError -- did you use https on a site that"
+            # I could overload these errors with __repr__, but I would
+            # rather just suppress the traceback and give the info needed
+        except (MissingSchema, ConnectionError) as e:
+            if isinstance(e, ConnectionError):
+                print("ConnectionError -- did you use https on a site that"
                     " does not support secure http? Try http instead."
+                    "\n\nDetails :: {}".format(e))
+            elif isinstance(e, MissingSchema):
+                print("MissingSchema -- did you include the type of "
+                    "protocol in the input web address?Please try what"
+                    " the error suggests."
                     "\n\nDetails :: {}".format(e))
             sys.exit(0)
         return func_ret
