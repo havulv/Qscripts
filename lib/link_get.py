@@ -26,8 +26,9 @@ def retrieve_links(link, tag_all='search-text', href='a'):
     '''
     page = bs(requests.get(link).text, 'html.parser')
     links = [] # type: list[str]
-    for tag in page.find_all( href):
-        links.append(tag.get('href'))
+    for tag in page.find_all(href):
+        if tag.get('href'):
+            links.append(tag.get('href'))
     return links
 
 def print_q_string(links):
