@@ -27,7 +27,8 @@ def connection_errors(func):
 
 @connection_errors
 def html(sitename):
-    req = requests.get(sitename)
+    headers = { 'User-Agent' : 'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1667.0 Safari/537.36'}
+    req = requests.get(sitename, headers=headers)
     return req.text if req.status_code == 200 else req.status_code
 
 def sift(html):
