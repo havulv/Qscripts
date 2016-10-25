@@ -159,10 +159,11 @@ def loop(url, find, schema):
 def robot_read(base_url):
     t_out = 5
     html = goto('/'.join(base_url.split('/') + ["robots.txt"]))
-    for line in html:
+    for line in html.split('\n'):
         if "Crawl-delay:" == line[:12]:
             t_out = int(line[12:])
             break
+    log.debug("Setting time out to {}".format(t_out))
     time.sleep(t_out)
     return t_out
 
