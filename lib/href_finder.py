@@ -11,8 +11,9 @@
         -Combine this with other requests modules in this directory
 '''
 
+from time import sleep as slp
 import logging as log
-import requests, time, re, sys, csv, os
+import requests, argparse, re, csv, os
 from bs4 import BeautifulSoup as bs
 from requests.exceptions import MissingSchema, ConnectionError
 
@@ -135,7 +136,7 @@ def loop(url, find, schema):
         if html == None:
             url = to_go.pop()
             gone_to.add(url)
-            time.sleep(time_out)
+            slp(time_out)
             continue
 
         hrefs = get_hrefs(html)
@@ -151,7 +152,7 @@ def loop(url, find, schema):
         try:
             url = to_go.pop()
             gone_to.add(url)
-            time.sleep(time_out)
+            slp(time_out)
         except KeyError:
             break
     print(pages)
@@ -165,7 +166,7 @@ def robot_read(base_url):
             t_out = int(line[12:])
             break
     log.debug("Setting time out to {}".format(t_out))
-    time.sleep(t_out)
+    slp(t_out)
     return t_out
 
 
@@ -185,6 +186,11 @@ def main(out, seek_tuple):
     print(":: Writing to file")
     write_to(out, pages)
     print(":: File closed and exiting program.")
+
+def parse_args():
+
+
+
 
 if __name__ == "__main__":
     try:
