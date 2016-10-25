@@ -89,11 +89,8 @@ def goto(url="localhost"):
                             'AppleWebKit/537.36 (KHTML, like Gecko) '
                             'Chrome/32.0.1667.0 Safari/537.36'
                 }
-    # Banned filetype
-    if url[-4:] == ".pdf":
-        return None
-    else:
-        req = requests.get(url, headers=headers)
+
+    req = requests.get(url, headers=headers)
     return req.text if req.status_code == 200 else None
 
 # schema must already be regex compiled
@@ -105,7 +102,8 @@ def get_hrefs(text):
 
 def match(hrefs, schema):
     log.debug("Matching {} against {}".format(hrefs, schema))
-    return set(filter(lambda x: schema.search(x) and x[:7] != "mailto:", hrefs))
+    return set(filter(lambda x: schema.search(x) and x[:7] != "mailto:" \
+                        and x[-4:] != ".pdf" and x[-4:] != ".css", hrefs))
 
 def validate_url(base_url, addendum):
     ret_url = addendum
