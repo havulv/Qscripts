@@ -167,13 +167,10 @@ def write_to(out, pages):
         writer.writerow([page])
     sheet.close()
 
-def main(out):
+def main():
     options = parse_args()
     find = re.compile("(" + options.find.strip() + ")")
-    if not options.schema:
-        schema = re.compile("(/)")
-    else:
-        schema = re.compile("(" + options.schema.strip() + ")")
+    schema = re.compile("(" + options.schema.strip() + ")")
     log.debug("User input: url={}, find={}, schema={}".format(
                                 options.url.strip(), find, schema))
     pages = loop(options.url.strip(), find, schema)
@@ -198,9 +195,13 @@ def parse_args():
         "-s", "--schema", metavar="schema", nargs=1, type=str, help=(
         "A schema to narrow down the urls that need to be searched. "
         "Without this, the crawl might take some time. (Especially if "
-        "the site has some insane crawl rate like 10 seconds)"))
+        "the site has some insane crawl rate like 10 seconds)"),
+        default='/')
     parser.add_argument(
-        "
+        "-o", "--outfile", metavar="Output-File", nargs=1, type=str,
+        help=("Specify the name of the file to ouput to. Always "
+        "outputs in the .csv format."),
+        default="Href_Finder_Results")
     opts = parser.parse_args()
     return opts
 
