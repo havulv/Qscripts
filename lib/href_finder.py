@@ -158,7 +158,6 @@ def robot_read(base_url):
     slp(t_out)
     return t_out
 
-
 def write_to(out, pages):
     sheet = open(out+".csv", 'w', newline="")
     log.debug("Writing to file {}.csv".format(out))
@@ -169,14 +168,14 @@ def write_to(out, pages):
 
 def main():
     options = parse_args()
-    find = re.compile("(" + options.find.strip() + ")")
-    schema = re.compile("(" + options.schema.strip() + ")")
+    find = re.compile("(" + options.find[0].strip() + ")")
+    schema = re.compile("(" + options.schema[0].strip() + ")")
     log.debug("User input: url={}, find={}, schema={}".format(
-                                options.url.strip(), find, schema))
-    pages = loop(options.url.strip(), find, schema)
+                                options.url.strip[0](), find, schema))
+    pages = loop(options.url[0].strip(), find, schema)
 
     print(":: Writing to file")
-    write_to(out, pages)
+    write_to(options.outfile[0], pages)
     print(":: File closed and exiting program.")
 
 def parse_args():
@@ -184,11 +183,11 @@ def parse_args():
         description=("Crawl a domain for a specific hyperlink. Use the"
             " 'schema' to try and cut down on the run-time"))
     parser.add_argument(
-        "url", metavar="URL", nargs=1, type=str, help=("The domain "
+        "url", metavar="url", nargs=1, type=str, help=("The domain "
         "that is to be crawled. Please include 'http' or 'https' and "
         "end with '/'"))
     parser.add_argument(
-        "find", metavar="FIND", nargs=1, type=str, help=("The url or "
+        "find", metavar="find", nargs=1, type=str, help=("The url or "
         "piece of the url to find. Be careful what you put in because "
         "you can't go back once you put this in."))
     parser.add_argument(
