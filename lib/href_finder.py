@@ -122,6 +122,7 @@ def loop(url, find, schema):
     while True:
         prnt = "\r:: Scraping {}".format(url)
         print(prnt + " "*(os.get_terminal_size()[0]-len(prnt)), end='')
+        sys.flush()
         html = goto(url=url)
 
         if html == None:
