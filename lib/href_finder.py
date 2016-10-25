@@ -128,7 +128,8 @@ def loop(url, find, schema):
     time_out = robot_read(base_url)
     pages, gone_to, to_go = [], set(), set()
     while True:
-        print(":: Scraping {}".format(url))
+        print("\r" + " "*os.get_terminal_size()[0], end='')
+        print("\r:: Scraping {}".format(url), end='')
         html = goto(url=url)
 
         if html == None:
