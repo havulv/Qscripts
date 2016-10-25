@@ -101,11 +101,13 @@ def get_hrefs(text):
     hrefs = {tag['href'].strip() for tag in html.find_all(href=True)}
     return hrefs
 
+# Refactor
 def match(hrefs, schema):
     log.debug("Matching {} against {}".format(hrefs, schema))
     return set(filter(lambda x: schema.search(x) and x[:7] != "mailto:" \
             and (x[-4:] not in BAN_FTYPES) and (".png" not in x) \
-            and (".jpg" not in x) and (".svg" not in x), hrefs))
+            and (".jpg" not in x) and (".svg" not in x) and \
+            (".jpeg" not in x), hrefs))
 
 def validate_url(base_url, addendum):
     ret_url = addendum
@@ -117,7 +119,7 @@ def validate_url(base_url, addendum):
 def on_site_only(base_url, urls):
     return set(filter( lambda x: x[:len(base_url)] == base_url, urls))
 
-def loop(url, find, schema):
+def loop(url, find, schema, ignore):
     base_url = url
     time_out = robot_read(base_url)
     pages, gone_to, to_go = [], set(), set()
@@ -134,6 +136,10 @@ def loop(url, find, schema):
             continue
 
         hrefs = get_hrefs(html)
+        if ignore:
+            for ign in ignore:
+                hrefs = hrefs - match(hrefs, ign)
+
         matched = on_site_only(base_url, map(
             lambda x: validate_url(base_url, x), match(hrefs, schema)))
         found = match(matched, find)
@@ -177,7 +183,11 @@ def main():
     schema = re.compile("(" + options.schema[0].strip() + ")")
     log.debug("User input: url={}, find={}, schema={}".format(
                                 options.url[0].strip(), find, schema))
-    pages = loop(options.url[0].strip(), find, schema)
+    if options.ignore[0]:
+        ignore = [re.compile("(" + i.strip() + ")") for i in options.ignore]
+    else:
+        ignore = None
+    pages = loop(options.url[0].strip(), find, schema, ignore)
 
     print(":: Writing to file")
     write_to(options.outfile[0], pages)
@@ -206,6 +216,11 @@ def parse_args():
         help=("Specify the name of the file to ouput to. Always "
         "outputs in the .csv format."),
         default="Href_Finder_Results")
+    parser.add_argument(
+        "-i", "--ignore", metavar="ignore", nargs=*, type=str,
+        help=("Specify parts of the domain to ignore. Please delineate"
+        "different sections by enclosing them in '/'."),
+        default=None)
     opts = parser.parse_args()
     return opts
 
