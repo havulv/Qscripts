@@ -89,7 +89,11 @@ def goto(url="localhost"):
                             'AppleWebKit/537.36 (KHTML, like Gecko) '
                             'Chrome/32.0.1667.0 Safari/537.36'
                 }
-    req = requests.get(url, headers=headers)
+    # Banned filetype
+    if url[-4:] == ".pdf":
+        return None
+    else:
+        req = requests.get(url, headers=headers)
     return req.text if req.status_code == 200 else None
 
 # schema must already be regex compiled
