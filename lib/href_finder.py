@@ -103,7 +103,8 @@ def get_hrefs(text):
 def match(hrefs, schema):
     log.debug("Matching {} against {}".format(hrefs, schema))
     return set(filter(lambda x: schema.search(x) and x[:7] != "mailto:" \
-                        and x[-4:] != ".pdf" and x[-4:] != ".css", hrefs))
+            and x[-4:] != ".pdf" and x[-4:] != ".css" and \
+            x[-4:] != ".mp4" and (".jpg" not in x), hrefs))
 
 def validate_url(base_url, addendum):
     ret_url = addendum
@@ -122,7 +123,7 @@ def loop(url, find, schema):
     while True:
         prnt = "\r:: Scraping {}".format(url)
         print(prnt + " "*(os.get_terminal_size()[0]-len(prnt)), end='')
-        sys.flush()
+        sys.stdout.flush()
         html = goto(url=url)
 
         if html == None:
