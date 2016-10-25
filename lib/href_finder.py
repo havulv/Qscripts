@@ -17,6 +17,7 @@ import requests, argparse, re, csv, os, sys
 from bs4 import BeautifulSoup as bs
 from requests.exceptions import MissingSchema, ConnectionError
 
+BAN_FTYPES = [".pdf", ".css", ".mp4", ".jpg", ".png", ".svg"]
 LOG_DIR = os.path.join(os.getcwd(), os.path.normpath("log/"))
 
 if not os.path.exists(LOG_DIR):
@@ -103,8 +104,8 @@ def get_hrefs(text):
 def match(hrefs, schema):
     log.debug("Matching {} against {}".format(hrefs, schema))
     return set(filter(lambda x: schema.search(x) and x[:7] != "mailto:" \
-            and x[-4:] != ".pdf" and x[-4:] != ".css" and \
-            x[-4:] != ".mp4" and (".jpg" not in x), hrefs))
+            and (x[-4:] not in BAN_FTYPES) and (".png" not in x) \
+            and (".jpg" not in x) and (".svg" not in x), hrefs))
 
 def validate_url(base_url, addendum):
     ret_url = addendum
