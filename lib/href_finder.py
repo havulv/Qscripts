@@ -123,7 +123,7 @@ def loop(url, find, schema):
     pages, gone_to, to_go = [], set(), set()
     while True:
         prnt = "\r:: Scraping {}".format(url)
-        print(prnt + " "*(len(prnt)-os.get_terminal_size()[0]), end='')
+        print(prnt + " "*(os.get_terminal_size()[0]-len(prnt)), end='')
         html = goto(url=url)
 
         if html == None:
