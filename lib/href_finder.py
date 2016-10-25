@@ -118,8 +118,8 @@ def loop(url, find, schema):
     time_out = robot_read(base_url)
     pages, gone_to, to_go = [], set(), set()
     while True:
-        print("\r" + " "*os.get_terminal_size()[0], end='')
-        print("\r:: Scraping {}".format(url), end='')
+        prnt = "\r:: Scraping {}".format(url)
+        print(prnt + " "*(len(prnt)-os.get_terminal_size()[0]), end='')
         html = goto(url=url)
 
         if html == None:
@@ -171,7 +171,7 @@ def main():
     find = re.compile("(" + options.find[0].strip() + ")")
     schema = re.compile("(" + options.schema[0].strip() + ")")
     log.debug("User input: url={}, find={}, schema={}".format(
-                                options.url.strip[0](), find, schema))
+                                options.url[0].strip(), find, schema))
     pages = loop(options.url[0].strip(), find, schema)
 
     print(":: Writing to file")
