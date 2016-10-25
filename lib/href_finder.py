@@ -114,7 +114,6 @@ def user_in():
     return url, find, schema
 
 def validate_url(base_url, addendum):
-    log.debug("Validating {}".format(addendum))
     ret_url = addendum
     if "http" not in addendum:
         ret_url = '/'.join(base_url.split('/')[:-1] +
@@ -124,12 +123,10 @@ def validate_url(base_url, addendum):
 def on_site_only(base_url, urls):
     return set(filter( lambda x: x[:len(base_url)] == base_url, urls))
 
-
 def loop(url, find, schema):
     base_url = url
     pages, gone_to, to_go = [], set(), set()
     while True:
-        url = validate_url(base_url, url)
         print(":: Scraping {}".format(url))
         html = goto(url=url)
 
@@ -138,11 +135,13 @@ def loop(url, find, schema):
             gone_to.add(url)
             time.sleep(10)
             continue
+
         hrefs = get_hrefs(html)
         matched = on_site_only(base_url, map(
             lambda x: validate_url(base_url, x), match(hrefs, schema)))
-        log.debug("find : {}, match : {}".format(match(matched, find), matched))
-        if match(matched, find):
+        found = match(matched, find)
+        log.debug("find : {}, match : {}".format(found, matched))
+        if found:
             pages.append(url)
 
         to_go |= (matched - gone_to)
@@ -161,7 +160,7 @@ def write_to(out, pages):
     log.debug("Writing to file {}.csv".format(out))
     writer = csv.writer(sheet)
     for page in pages:
-        writer.writerow(page)
+        writer.writerow([page])
     sheet.close()
 
 def main(out, seek_tuple):
