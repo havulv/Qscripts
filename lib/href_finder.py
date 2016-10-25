@@ -125,6 +125,7 @@ def on_site_only(base_url, urls):
 
 def loop(url, find, schema):
     base_url = url
+    time_out = robot_read(base_url)
     pages, gone_to, to_go = [], set(), set()
     while True:
         print(":: Scraping {}".format(url))
@@ -133,7 +134,7 @@ def loop(url, find, schema):
         if html == None:
             url = to_go.pop()
             gone_to.add(url)
-            time.sleep(10)
+            time.sleep(time_out)
             continue
 
         hrefs = get_hrefs(html)
@@ -149,11 +150,22 @@ def loop(url, find, schema):
         try:
             url = to_go.pop()
             gone_to.add(url)
-            time.sleep(10)
+            time.sleep(time_out)
         except KeyError:
             break
     print(pages)
     return pages
+
+def robot_read(base_url):
+    t_out = 5
+    html = goto('/'.join(base_url.split('/') + ["robots.txt"]))
+    for line in html:
+        if "Crawl-delay:" == line[:12]:
+            t_out = int(line[12:])
+            break
+    time.sleep(t_out)
+    return t_out
+
 
 def write_to(out, pages):
     sheet = open(out+".csv", 'w', newline="")
