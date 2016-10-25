@@ -13,7 +13,7 @@
 
 from time import sleep as slp
 import logging as log
-import requests, argparse, re, csv, os
+import requests, argparse, re, csv, os, sys
 from bs4 import BeautifulSoup as bs
 from requests.exceptions import MissingSchema, ConnectionError
 
@@ -103,17 +103,6 @@ def match(hrefs, schema):
     log.debug("Matching {} against {}".format(hrefs, schema))
     return set(filter(lambda x: schema.search(x) and x[:7] != "mailto:", hrefs))
 
-def user_in():
-    url = input("What is the site you wish to crawl?\n").strip()
-    find = re.compile("(" +
-            input("What is the specific page you want to trace?"
-                                                "\n").strip() + ")")
-    schema = re.compile("(" +
-            input("Is there a specific url structure to speed up"
-                                        " searching?\n").strip() + ")")
-    log.debug("User input: url={}, find={}, schema={}".format(url, find, schema))
-    return url, find, schema
-
 def validate_url(base_url, addendum):
     ret_url = addendum
     if "http" not in addendum:
@@ -178,28 +167,43 @@ def write_to(out, pages):
         writer.writerow([page])
     sheet.close()
 
-def main(out, seek_tuple):
-    if not seek_tuple:
-        pages = loop(*user_in())
+def main(out):
+    options = parse_args()
+    find = re.compile("(" + options.find.strip() + ")")
+    if not options.schema:
+        schema = re.compile("(/)")
     else:
-        pages = loop(*seek_tuple)
+        schema = re.compile("(" + options.schema.strip() + ")")
+    log.debug("User input: url={}, find={}, schema={}".format(
+                                options.url.strip(), find, schema))
+    pages = loop(options.url.strip(), find, schema)
+
     print(":: Writing to file")
     write_to(out, pages)
     print(":: File closed and exiting program.")
 
 def parse_args():
-
-
+    parser = argparse.ArgumentParser(
+        description=("Crawl a domain for a specific hyperlink. Use the"
+            " 'schema' to try and cut down on the run-time"))
+    parser.add_argument(
+        "url", metavar="URL", nargs=1, type=str, help=("The domain "
+        "that is to be crawled. Please include 'http' or 'https' and "
+        "end with '/'"))
+    parser.add_argument(
+        "find", metavar="FIND", nargs=1, type=str, help=("The url or "
+        "piece of the url to find. Be careful what you put in because "
+        "you can't go back once you put this in."))
+    parser.add_argument(
+        "-s", "--schema", metavar="schema", nargs=1, type=str, help=(
+        "A schema to narrow down the urls that need to be searched. "
+        "Without this, the crawl might take some time. (Especially if "
+        "the site has some insane crawl rate like 10 seconds)"))
+    parser.add_argument(
+        "
+    opts = parser.parse_args()
+    return opts
 
 
 if __name__ == "__main__":
-    try:
-        out = sys.argv[1]
-        seek_tuple = [sys.argv[1].strip()] + list(map(
-            lambda x: re.compile("(" + x.strip() + ")"),
-                [sys.argv[3], sys.argv[4]]))
-    except IndexError:
-        out = "Pages_With_URL"
-        seek_tuple = None
-    finally:
-        main(out, seek_tuple)
+    main()
