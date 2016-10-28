@@ -219,7 +219,9 @@ def parse_args():
         "-s", "--schema", metavar="schema", nargs=1, type=str, help=(
         "A schema to narrow down the urls that need to be searched. "
         "Without this, the crawl might take some time. (Especially if "
-        "the site has some insane crawl rate like 10 seconds)"),
+        "the site has some insane crawl rate like 10 seconds) This is "
+        "essentially: only look at urls that have SCHEMA within them "
+        "and ignore all other pages."),
         default='/')
     parser.add_argument(
         "-o", "--outfile", metavar="Output-File", nargs=1, type=str,
@@ -229,7 +231,9 @@ def parse_args():
     parser.add_argument(
         "-i", "--ignore", metavar="ignore", nargs='*', type=str,
         help=("Specify parts of the domain to ignore. Please delineate"
-        "different sections by enclosing them in '/'."),
+        "different sections by enclosing them in '/'. You can think of"
+        " ignore as NOT (ignore AND ignore ...) if that makes it "
+        "easier."),
         default=None)
     opts = parser.parse_args()
     return opts
