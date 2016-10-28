@@ -17,6 +17,8 @@ import requests, argparse, re, csv, os, sys
 from bs4 import BeautifulSoup as bs
 from requests.exceptions import MissingSchema, ConnectionError
 
+TERM_ROW, TERM_COL = os.get_terminal_size()
+
 BAN_FTYPES = [".pdf", ".css", ".mp4", ".jpg", ".png", ".svg", ".ico"]
 LOG_DIR = os.path.join(os.getcwd(), os.path.normpath("log/"))
 
@@ -133,7 +135,9 @@ def loop(url, find, schema, ignore):
     pages, gone_to, to_go = [], set(), set()
     while True:
         prnt = "\r:: Scraping {}".format(url)
-        print(prnt + " "*(os.get_terminal_size()[0]-len(prnt)), end='')
+        if len(prnt) > (TERM_ROW-9):
+            prnt = prnt[:(TERM_ROW-9)] + "..."
+        print(prnt, end='')
         sys.stdout.flush()
         html = goto(url=url)
 
