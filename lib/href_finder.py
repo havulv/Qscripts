@@ -17,7 +17,7 @@ import requests, argparse, re, csv, os, sys
 from bs4 import BeautifulSoup as bs
 from requests.exceptions import MissingSchema, ConnectionError
 
-BAN_FTYPES = [".pdf", ".css", ".mp4", ".jpg", ".png", ".svg"]
+BAN_FTYPES = [".pdf", ".css", ".mp4", ".jpg", ".png", ".svg", ".ico"]
 LOG_DIR = os.path.join(os.getcwd(), os.path.normpath("log/"))
 
 if not os.path.exists(LOG_DIR):
@@ -83,6 +83,9 @@ def connection_errors(func):
         return func_ret
     return wrap_request
 
+def reg_compiler(string):
+    return re.compile('(' + string.strip() + ')')
+
 @connection_errors
 def goto(url="localhost"):
     headers = {
@@ -119,6 +122,10 @@ def validate_url(base_url, addendum):
 def on_site_only(base_url, urls):
     return set(filter( lambda x: x[:len(base_url)] == base_url, urls))
 
+# I could clean up some of this logic with functions but, function
+# calls take additional time.
+#TODO test run time on standard site with and without broken out
+#TODO with and without function calls
 def loop(url, find, schema, ignore):
     base_url = url
     time_out = robot_read(base_url)
@@ -179,12 +186,12 @@ def write_to(out, pages):
 
 def main():
     options = parse_args()
-    find = re.compile("(" + options.find[0].strip() + ")")
-    schema = re.compile("(" + options.schema[0].strip() + ")")
+    find = reg_compiler(options.find[0])
+    schema = reg_compiler(options.schema[0])
     log.debug("User input: url={}, find={}, schema={}".format(
                                 options.url[0].strip(), find, schema))
     if options.ignore[0]:
-        ignore = [re.compile("(" + i.strip() + ")") for i in options.ignore]
+        ignore = [reg_compiler(ign) for ign in options.ignore]
     else:
         ignore = None
     pages = loop(options.url[0].strip(), find, schema, ignore)
@@ -217,7 +224,7 @@ def parse_args():
         "outputs in the .csv format."),
         default="Href_Finder_Results")
     parser.add_argument(
-        "-i", "--ignore", metavar="ignore", nargs=*, type=str,
+        "-i", "--ignore", metavar="ignore", nargs='*', type=str,
         help=("Specify parts of the domain to ignore. Please delineate"
         "different sections by enclosing them in '/'."),
         default=None)
