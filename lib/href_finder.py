@@ -104,7 +104,7 @@ def get_hrefs(text):
     hrefs = {tag['href'].strip() for tag in html.find_all(href=True)}
     return hrefs
 
-# Refactor
+#TODO Refactor
 def match(hrefs, schema):
     log.debug("Matching {} against {}".format(hrefs, schema))
     return set(filter(lambda x: schema.search(x) and x[:7] != "mailto:" \
@@ -115,7 +115,8 @@ def match(hrefs, schema):
 def validate_url(base_url, addendum):
     ret_url = addendum
     if "http" not in addendum:
-        ret_url = '/'.join(base_url.split('/')[:-1] +
+        b_split = base_url[:-1] if base_url[-1] == '/' else base_url
+        ret_url = '/'.join(b_split.split('/') +
                             addendum.split('/')[1:])
     return ret_url
 
@@ -146,7 +147,6 @@ def loop(url, find, schema, ignore):
         if ignore:
             for ign in ignore:
                 hrefs = hrefs - match(hrefs, ign)
-
         matched = on_site_only(base_url, map(
             lambda x: validate_url(base_url, x), match(hrefs, schema)))
         found = match(matched, find)
@@ -162,7 +162,6 @@ def loop(url, find, schema, ignore):
             slp(time_out)
         except KeyError:
             break
-    print(pages)
     return pages
 
 def robot_read(base_url):
