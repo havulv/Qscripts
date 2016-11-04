@@ -106,6 +106,12 @@ def get_hrefs(text):
     hrefs = {tag['href'].strip() for tag in html.find_all(href=True)}
     return hrefs
 
+def get_tags(tag, text):
+    log.debug("Getting {} for previous url".format(tag))
+    html = bs(text, 'html.parser')
+    elements = [ i.contents[0] for i in html.find_all(tag)]
+    return elements
+
 #TODO Refactor
 def match(hrefs, schema):
     log.debug("Matching {} against {}".format(hrefs, schema))
@@ -124,6 +130,21 @@ def validate_url(base_url, addendum):
 
 def on_site_only(base_url, urls):
     return set(filter( lambda x: x[:len(base_url)] == base_url, urls))
+
+def get_elements(outfile, tag):
+    log.debug("Getting {} at urls listed in {}".format(tag, outfile))
+    href_file = open(outfile + ".csv", "r", newline='')
+    href = []
+    read_csv = csv.reader(href_file)
+    for row in read_csv:
+        href.append([i.strip() for i in row])
+    href_file.close()
+
+    # You are guaranteed to get only one href
+    for index, urls in enumerate(href):
+        href[index] = href[index] + get_tags(tag, goto(urls[0]))
+
+    return href
 
 # I could clean up some of this logic with functions but, function
 # calls take additional time.
@@ -180,12 +201,14 @@ def robot_read(base_url):
     return t_out
 
 def write_to(out, pages):
+    print(":: Writing to file")
     sheet = open(out+".csv", 'w', newline="")
     log.debug("Writing to file {}.csv".format(out))
     writer = csv.writer(sheet)
     for page in pages:
         writer.writerow([page])
     sheet.close()
+    print(":: File closed.")
 
 def main():
     options = parse_args()
@@ -199,9 +222,15 @@ def main():
         ignore = None
     pages = loop(options.url[0].strip(), find, schema, ignore)
 
-    print(":: Writing to file")
     write_to(options.outfile[0], pages)
-    print(":: File closed and exiting program.")
+
+    if options.get[0]:
+        href_N_tag = get_element(options.outfile[0],
+                                                options.get[0])
+        write_to(options.outfile[0], href_N_tag)
+
+    print(":: Exiting Program.")
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -234,6 +263,12 @@ def parse_args():
         "different sections by enclosing them in '/'. You can think of"
         " ignore as NOT (ignore AND ignore ...) if that makes it "
         "easier."),
+        default=None)
+    parser.add_argument(
+        "-g", "--get-element", metavar="get", nargs=1, type=str,
+        help=("Retrieve the given element of the urls once they have "
+            "been found. Useful only when there are a small number of "
+            "links and only finds the elements of the resultant pages"),
         default=None)
     opts = parser.parse_args()
     return opts
