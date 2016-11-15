@@ -31,11 +31,11 @@ def html(sitename):
     req = requests.get(sitename, headers=headers)
     return req.text if req.status_code == 200 else req.status_code
 
-def sift(html):
+def sift(html, tag):
     page = bs(html, 'html.parser')
-    dscrp = page.find('meta', {'name' : 'description'})
+    dscrp = page.find('meta', {'name' : tag})
     if not dscrp:
-        dscrp = page.find('meta', {'property' : 'og:description'})
+        dscrp = page.find('meta', {'property' : 'og:'+tag})
     return dscrp.get('content') if dscrp != None else "No Description"
 
 def main():
@@ -48,6 +48,10 @@ def main():
         print(sift(pg))
     else:
         raise ValueError("{0} Error".format(pg))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
 
 if __name__ == "__main__":
     main()
