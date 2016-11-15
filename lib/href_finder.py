@@ -120,6 +120,14 @@ def match(hrefs, schema):
             and (".jpg" not in x) and (".svg" not in x) and \
             (".jpeg" not in x), hrefs))
 
+def sift(html, tag):
+    page = bs(html, 'html.parser')
+    tagged = page.find('meta', {'name' : tag})
+    if not tagged:
+        tagged = page.find('meta', {'property' : 'og:' + tag})
+    return tagged.get('content') if tagged != None else ("No %s" % tag)
+
+
 def validate_url(base_url, addendum):
     ret_url = addendum
     if "http" not in addendum:
@@ -212,22 +220,34 @@ def write_to(out, pages):
 
 def main():
     options = parse_args()
+    log.debug("User input :: " + \
+        ", ".join(
+                map(" = ".join,
+                    [[k,str(v)] for k,v in {**vars(options)}.items()]
+                    )
+                ))
     find = reg_compiler(options.find[0])
-    schema = reg_compiler(options.schema[0])
-    log.debug("User input: url={}, find={}, schema={}".format(
-                                options.url[0].strip(), find, schema))
-    if options.ignore[0]:
-        ignore = [reg_compiler(ign) for ign in options.ignore]
+
+    if options.get_meta[0]:
+        pages = [sift(goto(options.url[0].strip()), tag=options.get_meta[0])]
     else:
-        ignore = None
-    pages = loop(options.url[0].strip(), find, schema, ignore)
+        schema = reg_compiler(options.schema[0])
+        if options.ignore[0]:
+            ignore = [reg_compiler(ign) for ign in options.ignore]
+        else:
+            ignore = None
+        pages = loop(options.url[0].strip(), find, schema, ignore)
 
-    write_to(options.outfile[0], pages)
+    if isinstance(options.outfile, list):
+        out = options.outfile[0]
+    else:
+        out = options.outfile
 
-    if options.get[0]:
-        href_N_tag = get_element(options.outfile[0],
-                                                options.get[0])
-        write_to(options.outfile[0], href_N_tag)
+    write_to(out, pages)
+
+    if options.get_element:
+        href_N_tag = get_element(out, options.get_element[0])
+        write_to(out, href_N_tag)
 
     print(":: Exiting Program.")
 
@@ -243,7 +263,7 @@ def parse_args():
     parser.add_argument(
         "find", metavar="find", nargs=1, type=str, help=("The url or "
         "piece of the url to find. Be careful what you put in because "
-        "you can't go back once you put this in."))
+        "you can't go back once you put this in."), default=None)
     parser.add_argument(
         "-s", "--schema", metavar="schema", nargs=1, type=str, help=(
         "A schema to narrow down the urls that need to be searched. "
@@ -269,6 +289,12 @@ def parse_args():
         help=("Retrieve the given element of the urls once they have "
             "been found. Useful only when there are a small number of "
             "links and only finds the elements of the resultant pages"),
+        default=None)
+    parser.add_argument(
+        "-gm", "--get-meta", metavar="tag", nargs=1, type=str,
+        help=("Retrieve the given meta element from a SINGLE webpage. "
+            "Note that this will not do any crawling of the site. And "
+            "will most likely only cooperate for meta tags."),
         default=None)
     opts = parser.parse_args()
     return opts
