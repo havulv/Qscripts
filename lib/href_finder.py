@@ -246,7 +246,7 @@ def main():
 
     write_to(out, pages)
 
-    if options.get_element:
+    if options.get_element[0]:
         href_N_tag = get_element(out, options.get_element[0])
         write_to(out, href_N_tag)
 
