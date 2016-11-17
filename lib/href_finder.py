@@ -163,7 +163,8 @@ def loop(url, find, schema, ignore):
     time_out = robot_read(base_url)
     pages, gone_to, to_go = [], set(), set()
     while True:
-        prnt = "\r:: Scraping {}".format(url)
+        prnt = "\r:: Scraping {}".format(
+                    url.encode('ascii', 'ignore').decode('ascii'))
         if len(prnt) > (TERM_ROW-9):
             prnt = prnt[:(TERM_ROW-9)] + "..."
         print(prnt, end='')
@@ -238,7 +239,7 @@ def main():
             ignore = None
         pages = loop(options.url[0].strip(), find, schema, ignore)
 
-    if isinstance(options.outfile, list):
+    if options.outfile[0]:
         out = options.outfile[0]
     else:
         out = options.outfile
@@ -283,19 +284,19 @@ def parse_args():
         "different sections by enclosing them in '/'. You can think of"
         " ignore as NOT (ignore AND ignore ...) if that makes it "
         "easier."),
-        default=None)
+        default=[None])
     parser.add_argument(
         "-g", "--get-element", metavar="get", nargs=1, type=str,
         help=("Retrieve the given element of the urls once they have "
             "been found. Useful only when there are a small number of "
             "links and only finds the elements of the resultant pages"),
-        default=None)
+        default=[None])
     parser.add_argument(
         "-gm", "--get-meta", metavar="tag", nargs=1, type=str,
         help=("Retrieve the given meta element from a SINGLE webpage. "
             "Note that this will not do any crawling of the site. And "
             "will most likely only cooperate for meta tags."),
-        default=None)
+        default=[None])
     opts = parser.parse_args()
     return opts
 
