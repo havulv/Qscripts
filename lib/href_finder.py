@@ -157,12 +157,12 @@ def get_elements(outfile, tag):
 # I could clean up some of this logic with functions but, function
 # calls take additional time.
 #TODO test run time on standard site with and without broken out
-#TODO with and without function calls
 def loop(url, find, schema, ignore):
     base_url = url
     time_out = robot_read(base_url)
     pages, gone_to, to_go = [], set(), set()
     while True:
+        print("\r" + " " * (TERM_ROW-3), end='')
         prnt = "\r:: Scraping {}".format(
                     url.encode('ascii', 'ignore').decode('ascii'))
         if len(prnt) > (TERM_ROW-9):
