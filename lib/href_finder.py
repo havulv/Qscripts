@@ -157,7 +157,11 @@ def get_elements(outfile, tag):
 # I could clean up some of this logic with functions but, function
 # calls take additional time.
 #TODO test run time on standard site with and without broken out
-def loop(url, find, schema, ignore):
+
+# Consider doing this with coroutines. That is, wait until the request
+# comes in and then (while sifting through the response) call next for
+# the next request
+def loop(url, find, schema, ignore, test=False):
     base_url = url
     time_out = robot_read(base_url)
     pages, gone_to, to_go = [], set(), set()
@@ -195,6 +199,10 @@ def loop(url, find, schema, ignore):
             gone_to.add(url)
             slp(time_out)
         except KeyError:
+            break
+        if test:
+            print(gone_to)
+            print(to_go)
             break
     return pages
 
@@ -237,12 +245,10 @@ def main():
             ignore = [reg_compiler(ign) for ign in options.ignore]
         else:
             ignore = None
-        pages = loop(options.url[0].strip(), find, schema, ignore)
+        pages = loop(options.url[0].strip(), find, schema, ignore, test=options.test)
 
     if options.outfile[0]:
         out = options.outfile[0]
-    else:
-        out = options.outfile
 
     write_to(out, pages)
 
@@ -275,9 +281,10 @@ def parse_args():
         default='/')
     parser.add_argument(
         "-o", "--outfile", metavar="Output-File", nargs=1, type=str,
-        help=("Specify the name of the file to ouput to. Always "
-        "outputs in the .csv format."),
-        default="Href_Finder_Results")
+        help=("Specify the name of the file to output to. Always "
+        "outputs in the .csv format. Defaults to Href_Finder_Results"
+        ".csv"),
+        default=["Href_Finder_Results"])
     parser.add_argument(
         "-i", "--ignore", metavar="ignore", nargs='*', type=str,
         help=("Specify parts of the domain to ignore. Please delineate"
@@ -297,6 +304,10 @@ def parse_args():
             "Note that this will not do any crawling of the site. And "
             "will most likely only cooperate for meta tags."),
         default=[None])
+    parser.add_argument(
+        "-t", "--test", action="store_true", default=False,
+        help=("Test the url, schema, etc for one run through the site "
+            "to check that you are searching for the correct item."))
     opts = parser.parse_args()
     return opts
 
