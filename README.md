@@ -87,6 +87,32 @@ Grab a site's description as listed in the "description" or "og:description" tag
 #### TODO
   * Update to a consistent User-Agent and maybe implement some speedups
 
+## href_finder.py
+
+Crawl a site for a specific link and other functionality. Has a mandatory robots.txt read for purposes of "being nice"
+
+Usage:
+```
+python href_finder.py [-t] [-g get-element] [-gm tag] [-s schema] [-o Output-File] url find [-i ignore, ..]
+```
+  * `-t` is for testing purposes. It only runs through one webpage and then breaks. Should be renamed to debug or something in the future.
+  * `-g get-element` retrieves an element from every gathered webpage AFTER these pages are scraped.
+  * `-gm tag` writes the string contents of the specified tag on `url` to the output file. Might be able to use with `-g` but this is a bug.
+  * `-s schema` if you know what the urls should look like then use this to specify the url schemas they must be
+  * `-o Output-File` the file that the results should be output to.
+  * `-i ignore, ..` ignore a certain pattern that you know should not be in the url (i.e. `.css` or `.jpg`)
+  * `url` the base url with which to search
+  * `find` the string/url to find
+
+### TODO
+  * Include the ability to specify the appearance of an arbitrary regex (valid) pattern within the sub-pages
+  * Include the ability to look for an arbitrary (valid) tag instead of href
+  * Add comments
+  * Update documentation
+  * Refactor into class structure
+
+
+
 Classes
 =======
 
