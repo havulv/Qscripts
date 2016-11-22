@@ -7,7 +7,6 @@
         -Introduce logging to handle offsite emails etc.
         -extend to arbitrary element/tag
         -Document
-        -Implement logging on failure instead of program stoppage
         -Combine this with other requests modules in this directory
 '''
 
@@ -78,6 +77,15 @@ def connection_correct(func, *args, tries=0, **kwargs):
     should only happen if someone passes "tries" as a keyword through a
     decorated function.
 '''
+
+def ctrl_c(func):
+    def wrap(*args, **kwargs):
+        try:
+            func_ret = func(*args, **kwargs)
+        except KeyboardInterrupt
+            func_ret = [None]
+        return func_ret
+    return wrap
 
 def connection_errors(func):
     def wrap_request(*args, **kwargs):
@@ -161,6 +169,7 @@ def get_elements(outfile, tag):
 # Consider doing this with coroutines. That is, wait until the request
 # comes in and then (while sifting through the response) call next for
 # the next request
+@ctrl_c
 def loop(url, find, schema, ignore, test=False):
     base_url = url
     time_out = robot_read(base_url)
