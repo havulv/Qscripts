@@ -29,27 +29,20 @@ def parse(line):
     if "Pinging" in line:
         print("Beginning ping")
     elif "Reply from " in line:
-        bit = int(line[line.find("bytes=")+6:line.find("time=")-1])*8
-        time_s = 1/1000 * int(line[line.find("time=")+5:line.find("ms")])
-        print("\/"*(math.ceil((1/(time_s*1000)) * (os.get_terminal_size()[0]-12))) + "| ", end="")
-        if bit/time_s > 1000:
-            print("{} Kb/s".format(int(bit/(time_s*1000))))
-        elif bit/time_s > 1000000:
-            print("{} Mb/s".format(int(bit/(time_s*1000000))))
-        elif bit/time_s > 1000000000:
-            print("GIGABIT")
-        else:
-            print("{} b/s".format(int(bit/time_s)))
+        bit = int(line[line.find("bytes=")+6:line.find("time")-1])*8
+        time_s = int(line[line.find("time")+5:line.find("ms")])
+        print("\/"*(math.ceil((1/(time_s*1000)) * (os.get_terminal_size()[0]/2-12))) + "| ", end="")
+        print("{}/{} b/ms".format(bit,time_s))
     elif "Ping statistics for" in line:
         print("Ending ping")
 
 @exit
-def main(ip="8.8.8.8"):
-    for line in execute(["ping", "-t", ip]):
+def main(*args, ip="8.8.8.8"):
+    for line in execute(["ping", "-t"] + list(*args) + [ip]):
         parse(line)
 
 if __name__ == "__main__":
     try:
-        main(ip=sys.argv[1])
+        main(sys.argv[2:], ip=sys.argv[1])
     except IndexError:
         main()
