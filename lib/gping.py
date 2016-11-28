@@ -31,13 +31,13 @@ def parse(line):
     elif "Reply from " in line:
         bit = int(line[line.find("bytes=")+6:line.find("time")-1])*8
         time_s = int(line[line.find("time")+5:line.find("ms")])
-        print("\/"*(math.ceil((1/(time_s*1000)) * (os.get_terminal_size()[0]/2-12))) + "| ", end="")
-        print("{}/{} b/ms".format(bit,time_s))
+        print("\/"*(math.ceil(((1/(time_s))*1.1) * (os.get_terminal_size()[0]/2-1))) + "| ", end="")
+        print("{}/{} bits/ms".format(bit,time_s))
     elif "Ping statistics for" in line:
         print("Ending ping")
 
 @exit
-def main(*args, ip="8.8.8.8"):
+def main(*args, ip="127.0.0.1"):
     for line in execute(["ping", "-t"] + list(*args) + [ip]):
         parse(line)
 
