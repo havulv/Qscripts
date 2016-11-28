@@ -112,6 +112,30 @@ python href_finder.py [-t] [-g get-element] [-gm tag] [-s schema] [-o Output-Fil
   * Refactor into class structure
 
 
+## gping.py
+
+Ping an IPv4 or IPv6 address continuously with a nice graphical bar to tell you how you are doing!
+
+Currently only available for Windows (basically a mask for ping -t ip) and with Ctrl-C to break out.
+
+Usage:
+```
+>python gping.py [[Normal ping options]] ip
+```
+Examples:
+```
+>python gping.py 8.8.8.8
+
+>python gping.py 127.0.0.1 -l 256
+```
+
+### TODO
+
+  * Make available for \*nix systems
+  * Have the option to set the token for displayed bar
+  * Display help on -h or no ip entry
+  * Have the option to collapse the bar into a small section so as not to clog up the rest of the terminal
+    * x% of total terminal lines
 
 Classes
 =======
