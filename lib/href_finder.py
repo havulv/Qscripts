@@ -82,7 +82,7 @@ def ctrl_c(func):
     def wrap(*args, **kwargs):
         try:
             func_ret = func(*args, **kwargs)
-        except KeyboardInterrupt
+        except KeyboardInterrupt:
             func_ret = [None]
         return func_ret
     return wrap
