@@ -81,6 +81,8 @@ def music_urls(bs_obj):
             # Saves a little bit of computation by not making it a list
             url = pieces[0] + "?" + filter(lambda x: "v" in x,
                                 pieces[1].split("&")).__next__()
+        elif "reddit.com" in url:
+            continue
         if url not in old_links:
             new_links.append(url)
     return new_links
@@ -117,15 +119,15 @@ def get_down(music):
             :music: = list of urls to send to player
         Returns -- VOID
     '''
-    for song in music:
-        log.debug("Calling to VLC :: URL: {}".format(song))
-        try:
-            sbp.run([VLC_PATH, "--intf=dummy",
-                "--no-video" , song, "vlc://quit"])
-            time.sleep(.25) #Sleep so that VLC doesn't crash -- bad code practice
-        except sbp.CalledProcessError:
-            log.debug("URL: {} failed, continuing with"
-                                    " others".format(song))
+    log.debug("Calling to VLC :: BASE URL: {}".format([ i.split('/')[2] for i in music]))
+    try:
+        sbp.run([VLC_PATH, #"--intf=dummy", #interface choice
+            "--no-video" , "--random",
+            #"vlc://quit" # quit after song
+            ] + list(music))
+        time.sleep(.25) #Sleep so that VLC doesn't crash -- bad code practice
+    except sbp.CalledProcessError:
+        log.debug("TOTAL VLC FAILURE")
 
 def dance_baby(slp=300):
     '''
