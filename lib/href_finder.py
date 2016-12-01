@@ -227,7 +227,7 @@ def robot_read(base_url):
     return t_out
 
 def write_to(out, pages):
-    print(":: Writing to file")
+    print("\n:: Writing to file")
     sheet = open(out+".csv", 'w', newline="")
     log.debug("Writing to file {}.csv".format(out))
     writer = csv.writer(sheet)
