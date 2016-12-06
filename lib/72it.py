@@ -15,7 +15,11 @@ import sys, re, math
 
 def reg_div(line):
     ''' Make sure it doesn't give a weird word on endline '''
-    pass #Bad form on the func: pass
+    splits = math.ceil(len(line)/72)
+    ret = []
+    for i in range(splits):
+        ret.append(''.join(re.split("(\W+)", line[(i*72):((i+1)*72)])))
+    return ret
 
 def restrict(lines):
     '''
@@ -28,6 +32,7 @@ def restrict(lines):
     ret_list = []
     for line in lines:
         if len(line) > 72:
+            reg_div
             splits = math.ceil(len(line)/72)
             for i in range(splits):
                 ret_list.append(line[(i*72):((i+1)*72)])
