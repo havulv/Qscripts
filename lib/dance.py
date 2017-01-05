@@ -14,18 +14,17 @@ def move():
                                 eyes[randint(0, len(eyes)-1)],
                                 arms[randint(0, len(arms)-1)])
 
+# Wrapping void function so the return is irrelavant
 def ctrl_c(func):
     def wrap(*args, **kwargs):
         try:
-            ret = func(*args, **kwargs)
+            func(*args, **kwargs)
         except KeyboardInterrupt:
-            ret = None
-            print('\r\n')
-            print('\r          /``````\ ')
-            print(' *(#_#)* { ByeBye }')
-            print('          \______/')
+            print('\r\n\r'+ ' '*14 + '/' + '`'*6 + '\\')
+            print('{}{{{: ^8}}}'.format(move(), "ByeBye"))
+            print(' '*14 + '\\' + '_'*6 +'/')
             exit(0)
-        return ret
+        return None
     return wrap
 
 @ctrl_c
