@@ -2,7 +2,6 @@
 from os import system, name, get_terminal_size
 from time import sleep
 from random import randint
-import sys
 
 def move():
     eyes = [ "^", "*", "@", "-", "#" ]
