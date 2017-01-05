@@ -29,24 +29,14 @@ def ctrl_c(func):
         return ret
     return wrap
 
-def printer(wait, clear=True):
-    if clear:
-        system('cls' if name == 'nt' else 'clear')
-        print('\n'*15)
+@ctrl_c
+def main():
     while True:
         print(
             *[move() for i in range(get_terminal_size()[0]//13)],
             end='\r', flush=True
             )
-        sleep(wait)
-
-@ctrl_c
-def main(clear=False):
-    clear = bool(clear)
-    printer(.15, clear)
+        sleep(.15)
 
 if __name__ == "__main__":
-    try:
-        main(sys.argv[1])
-    except IndexError:
-        main()
+    main()
