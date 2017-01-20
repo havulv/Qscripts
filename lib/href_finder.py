@@ -123,7 +123,7 @@ def get_tags(tag, text):
 #TODO Refactor
 def match(hrefs, schema):
     log.debug("Matching {} against {}".format(hrefs, schema))
-    return set(filter(lambda x: schema.search(x) and x[:7] != "mailto:" \
+    return set(filter(lambda x: re.search(schema, x) and x[:7] != "mailto:" \
             and (x[-4:] not in BAN_FTYPES) and (".png" not in x) \
             and (".jpg" not in x) and (".svg" not in x) and \
             (".jpeg" not in x), hrefs))
@@ -197,11 +197,15 @@ def loop(url, find, schema, ignore, test=False):
         matched = on_site_only(base_url, map(
             lambda x: validate_url(base_url, x), match(hrefs, schema)))
         found = match(matched, find)
+        log.info( "Found : {}, matched against : {}.".format(
+                                        len(found), len(matched)))
         log.debug("find : {}, match : {}".format(found, matched))
         if found:
             pages.append(url)
 
         to_go |= (matched - gone_to)
+        log.info( "Urls to check : {}, Urls checked : {}".format(
+                                            len(to_go), len(gone_to)))
         log.debug("to_go : {}, gone_to : {}".format(to_go, gone_to))
         try:
             url = to_go.pop()
@@ -222,14 +226,14 @@ def robot_read(base_url):
         if "Crawl-delay:" == line[:12]:
             t_out = int(line[12:])
             break
-    log.debug("Setting time out to {}".format(t_out))
+    log.info("Robots.txt found. Setting time out to {}".format(t_out))
     slp(t_out)
     return t_out
 
 def write_to(out, pages):
     print("\n:: Writing to file")
     sheet = open(out+".csv", 'w', newline="")
-    log.debug("Writing to file {}.csv".format(out))
+    log.info("Writing to file {}.csv".format(out))
     writer = csv.writer(sheet)
     for page in pages:
         writer.writerow([page])
@@ -238,13 +242,19 @@ def write_to(out, pages):
 
 def main():
     options = parse_args()
-    log.debug("User input :: " + \
+    log.info("User input :: " + \
         ", ".join(
                 map(" = ".join,
                     [[k,str(v)] for k,v in {**vars(options)}.items()]
                     )
                 ))
     find = reg_compiler(options.find[0])
+
+    if options.debug:
+        log.getLogger().setLevel(log.DEBUG)
+    else:
+        log.getLogger().setLevel(log.INFO)
+
 
     if options.get_meta[0]:
         pages = [sift(goto(options.url[0].strip()), tag=options.get_meta[0])]
@@ -317,6 +327,10 @@ def parse_args():
         "-t", "--test", action="store_true", default=False,
         help=("Test the url, schema, etc for one run through the site "
             "to check that you are searching for the correct item."))
+    parser.add_argument(
+        "-d", "--debug", action="store_true", default=False,
+        help=("Set the debug level for the logfile. Defaults to info "
+            "and moves to debug when this argument is used"))
     opts = parser.parse_args()
     return opts
 
