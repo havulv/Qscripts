@@ -10,6 +10,13 @@
         -Combine this with other requests modules in this directory
 '''
 
+# Async maybe for processing but not for requesting because ethis is all
+# being gathered from one site
+#import aiohttp
+#import asyncio
+#import async_timeout
+
+
 from time import sleep as slp
 import logging as log
 import requests, argparse, re, csv, os, sys
