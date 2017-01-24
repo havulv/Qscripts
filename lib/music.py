@@ -70,12 +70,12 @@ def music_urls(bs_obj):
     '''
     old_links = []
     new_links = []
-    tag = {'class' : 'title may-blank outbound '}
+    tag = {'class' : 'title may-blank outbound'}
     with open(SAVE_FILE, 'r') as get_urls:
         for url in get_urls.readlines():
             old_links.append(url.strip('\n'))
     for link in bs_obj.find_all('a', tag):
-        url = link.get('href')
+        url = link.get('data-href-url')
         if "youtube.com" in url and "&" and url:
             pieces = url.split("?")
             # Saves a little bit of computation by not making it a list
@@ -87,7 +87,7 @@ def music_urls(bs_obj):
             new_links.append(url)
     return new_links
 
-def get_up(sub="indieheads/new"):
+def get_up(sub="indieheads/new/"):
     '''
         Puts a GET request with a Mozilla 5.0 user-agent
         and my email.
@@ -122,7 +122,7 @@ def get_down(music):
     log.debug("Calling to VLC :: BASE URL: {}".format([ i.split('/')[2] for i in music]))
     try:
         sbp.run([VLC_PATH, #"--intf=dummy", #interface choice
-            "--no-video" , "--random",
+            "--no-video" ,
             #"vlc://quit" # quit after song
             ] + list(music))
         time.sleep(.25) #Sleep so that VLC doesn't crash -- bad code practice
@@ -135,11 +135,10 @@ def dance_baby(slp=300):
         the hour, every hour until termination.
         Parameters
             :music: = list of stream urls
-        Returns
-            :music: = list of stream urls
+        Returns -- VOID
     '''
     current_min = dt.now().minute
-    if -5 <= (current_min%20)-5 <= 5:
+    if (current_min+5)%20 <= 10:
         log.debug("LET'S GET THIS PARTY STARTED")
         music = music_urls(get_up())
         get_down(music)
