@@ -8,8 +8,13 @@ import requests, re
 from bs4 import BeautifulSoup as bs
 
 def get_sweb(site):
+    headers = {
+            'User-Agent' : 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) '
+                            'AppleWebKit/537.36 (KHTML, like Gecko) '
+                            'Chrome/56.0.2924.87 Safari/537.36'
+                }
     sw_url = 'https://www.similarweb.com/website/' + site
-    req = requests.get(sw_url)
+    req = requests.get(sw_url, headers=headers)
     return req if req.status_code == 200 else False
 
 def get_stats(req):
@@ -37,14 +42,18 @@ def get_stats(req):
     # Could do a filter object here but there is no need for lazy evals
     site_stats = [0.0 if stat == None else stat for stat in site_stats]
 
-    if site_stats[0][-1] == 'B':
-        site_stats[0] = int(float(site_stats[0][:-1])*(10**9))
-    elif site_stats[0][-1] == 'M':
-        site_stats[0] = int(float(site_stats[0][:-1])*(10**6))
-    elif site_stats[0][-1] == 'K':
-        site_stats[0] = int(float(site_stats[0][:-1])*(10**3))
-    else:
-        site_stats[0] = int(float(site_stats[0]))
+    try:
+        if site_stats[0][-1] == 'B':
+            site_stats[0] = int(float(site_stats[0][:-1])*(10**9))
+        elif site_stats[0][-1] == 'M':
+            site_stats[0] = int(float(site_stats[0][:-1])*(10**6))
+        elif site_stats[0][-1] == 'K':
+            site_stats[0] = int(float(site_stats[0][:-1])*(10**3))
+        else:
+            site_stats[0] = int(float(site_stats[0]))
+    except IndexError:
+        print(soup)
+        site_stats = [ 0, "ERR", "ERR", "ERR"]
     return site_stats
 
 def printer(site_list):
