@@ -8,6 +8,7 @@
         -extend to arbitrary element/tag
         -Document
         -Combine this with other requests modules in this directory
+        -Allow to pick up multiple hrefs/elements/tags on a page
 '''
 
 from time import sleep as slp
@@ -138,6 +139,7 @@ def sift(html, tag):
 
 def validate_url(base_url, addendum):
     ret_url = addendum
+    # Somehow this seems redundant. Fix later FIXME
     if "http" not in addendum:
         b_split = base_url[:-1] if base_url[-1] == '/' else base_url
         ret_url = '/'.join(b_split.split('/') +
@@ -172,7 +174,7 @@ def get_elements(outfile, tag):
 @ctrl_c
 def loop(url, find, schema, ignore, test=False):
     base_url = url
-    time_out = robot_read(base_url)
+    time_out, disallow = robot_read(base_url)
     pages, gone_to, to_go = [], set(), set()
     while True:
         print("\r" + " " * (TERM_ROW-3), end='')
@@ -191,6 +193,7 @@ def loop(url, find, schema, ignore, test=False):
             continue
 
         hrefs = get_hrefs(html)
+        hrefs = hrefs - disallow
         if ignore:
             for ign in ignore:
                 hrefs = hrefs - match(hrefs, ign)
@@ -214,21 +217,25 @@ def loop(url, find, schema, ignore, test=False):
         except KeyError:
             break
         if test:
+            print(find)
             print(gone_to)
             print(to_go)
             break
     return pages
 
 def robot_read(base_url):
-    t_out = 5
+    t_out, disallow = 5, set()
     html = goto('/'.join(base_url.split('/') + ["robots.txt"]))
     for line in html.split('\n'):
         if "Crawl-delay:" == line[:12]:
             t_out = int(line[12:])
-            break
-    log.info("Robots.txt found. Setting time out to {}".format(t_out))
+        elif "Disallow" in line and "#" not in line:
+            disallow.add(validate_url(base_url,
+                    line.strip(" \n").split(" ")[-1]))
+    log.info("Robots.txt found. Setting timeout to {}".format(t_out))
+    log.info("Disallowing : {}".format(" ".join(disallow)))
     slp(t_out)
-    return t_out
+    return t_out, disallow
 
 def write_to(out, pages):
     print("\n:: Writing to file")
@@ -240,6 +247,18 @@ def write_to(out, pages):
     sheet.close()
     print(":: File closed.")
 
+def read_csv(fname):
+    urls = None
+    if os.path.isfile(fname):
+        with open(fname, 'r') as getter:
+            urls = [line.strip(' \n') for line in getter.readlines()]
+        for url in urls:
+            assert("http" in url)
+    else:
+        raise FileNotFoundError
+    return urls
+
+
 def main():
     options = parse_args()
     log.info("User input :: " + \
@@ -248,32 +267,32 @@ def main():
                     [[k,str(v)] for k,v in {**vars(options)}.items()]
                     )
                 ))
-    find = reg_compiler(options.find[0])
+    base = options.url[0].strip()
 
     if options.debug:
         log.getLogger().setLevel(log.DEBUG)
     else:
         log.getLogger().setLevel(log.INFO)
 
-
     if options.get_meta[0]:
         pages = [sift(goto(options.url[0].strip()), tag=options.get_meta[0])]
+    elif options.get_element[0]:
+        href_N_tag = get_element(out, options.get_element[0])
+        write_to(out, href_N_tag)
     else:
         schema = reg_compiler(options.schema[0])
         if options.ignore[0]:
             ignore = [reg_compiler(ign) for ign in options.ignore]
         else:
             ignore = None
-        pages = loop(options.url[0].strip(), find, schema, ignore, test=options.test)
-
-    if options.outfile[0]:
-        out = options.outfile[0]
-
-    write_to(out, pages)
-
-    if options.get_element[0]:
-        href_N_tag = get_element(out, options.get_element[0])
-        write_to(out, href_N_tag)
+        if options.fname:
+            for url in read_csv(options.fname[0]):
+                pages = loop(base, reg_compiler(url), schema, ignore, test=options.test)
+                outfile = url.split("/")[-1]
+                write_to(outfile, pages)
+        else:
+            pages = loop(base, reg_compiler(options.find[0]), schema, ignore, test=options.test)
+            write_to(options.outfile[0], pages)
 
     print(":: Exiting Program.")
 
@@ -286,10 +305,7 @@ def parse_args():
         "url", metavar="url", nargs=1, type=str, help=("The domain "
         "that is to be crawled. Please include 'http' or 'https' and "
         "end with '/'"))
-    parser.add_argument(
-        "find", metavar="find", nargs=1, type=str, help=("The url or "
-        "piece of the url to find. Be careful what you put in because "
-        "you can't go back once you put this in."), default=None)
+
     parser.add_argument(
         "-s", "--schema", metavar="schema", nargs=1, type=str, help=(
         "A schema to narrow down the urls that need to be searched. "
@@ -331,6 +347,17 @@ def parse_args():
         "-d", "--debug", action="store_true", default=False,
         help=("Set the debug level for the logfile. Defaults to info "
             "and moves to debug when this argument is used"))
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "-fn", "--fname", metavar="Input-File", nargs=1, type=str,
+        help=("Input a csv for which to read the urls from. The "
+            "subsequent findings are saved as csv files labeled after"
+            "the last page path."), default=None)
+    group.add_argument(
+        "-f", "--find", metavar="find", nargs=1, type=str, help=("The url or "
+        "piece of the url to find. Be careful what you put in because "
+        "you can't go back once you put this in."), default=None)
     opts = parser.parse_args()
     return opts
 
