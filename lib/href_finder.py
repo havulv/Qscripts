@@ -319,7 +319,7 @@ def main():
             pages = loop(
                 base, list(map(reg_compiler, read_csv(options.fname[0]))),
                 schema, ignore, test=options.test)
-            outfile = "{}_results.csv".format(options.fname[0].split(".")[0])
+            outfile = "{}_results".format(options.fname[0].split(".")[0])
             write_to(outfile, pages)
         else:
             pages = loop(base, reg_compiler(options.find[0]), schema, ignore, test=options.test)
