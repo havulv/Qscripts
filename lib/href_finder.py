@@ -135,10 +135,26 @@ def get_tags(tag, text):
 # TODO Refactor
 def match(hrefs, schema):
     log.debug("Matching {} against {}".format(hrefs, schema))
-    return set(filter(lambda x: re.search(schema, x) and x[:7] != "mailto:" and
-                      (x[-4:] not in BAN_FTYPES) and (".png" not in x) and
-                      (".jpg" not in x) and (".svg" not in x) and
-                      (".jpeg" not in x), hrefs))
+    retval = set()
+    try:
+        iter_schema = iter(schema)
+    except TypeError:
+        retval = set(filter(
+            lambda x: re.search(schema, x) and x[:7] != "mailto:" and
+            (x[-4:] not in BAN_FTYPES) and (".png" not in x) and
+            (".jpg" not in x) and (".svg" not in x) and
+            (".jpeg" not in x), hrefs))
+    else:
+        for i in iter_schema:
+            for j in filter(
+                    lambda x: re.search(i, x) and
+                    x[:7] != "mailto:" and
+                    (x[-4:] not in BAN_FTYPES) and (".png" not in x) and
+                    (".jpg" not in x) and (".svg" not in x) and
+                    (".jpeg" not in x), hrefs):
+                retval.add(j)
+
+    return retval
 
 
 def sift(html, tag):
@@ -300,10 +316,11 @@ def main():
         else:
             ignore = None
         if options.fname:
-            for url in read_csv(options.fname[0]):
-                pages = loop(base, reg_compiler(url), schema, ignore, test=options.test)
-                outfile = url.split("/")[-1]
-                write_to(outfile, pages)
+            pages = loop(
+                base, list(map(reg_compiler, read_csv(options.fname[0]))),
+                schema, ignore, test=options.test)
+            outfile = "{}_results.csv".format(options.fname[0].split(".")[0])
+            write_to(outfile, pages)
         else:
             pages = loop(base, reg_compiler(options.find[0]), schema, ignore, test=options.test)
             write_to(options.outfile[0], pages)
