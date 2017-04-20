@@ -87,10 +87,7 @@ def connection_correct(func, *args, tries=0, **kwargs):
 
 def ctrl_c(func):
     def wrap(*args, **kwargs):
-        try:
-            func_ret = func(*args, **kwargs)
-        except KeyboardInterrupt:
-            func_ret = [None]
+        func_ret = func(*args, **kwargs)
         return func_ret
     return wrap
 
@@ -103,7 +100,7 @@ def connection_errors(func):
 
 
 def reg_compiler(string):
-    return re.compile('(' + string.strip() + ')')
+    return re.compile('(' + string.strip("\" ") + ')')
 
 
 @connection_errors
@@ -204,66 +201,69 @@ def get_elements(outfile, tag):
 # the next request
 @ctrl_c
 def loop(url, find, schema, ignore, test=False):
-    base_url = url
-    time_out, disallow = robot_read(base_url)
-    pages, gone_to, to_go = [], set(), set()
-    while True:
-        print("\r" + " " * (TERM_ROW - 3), end='')
-        prnt = "\r:: Scraping {}".format(
-            url.encode('ascii', 'ignore').decode('ascii'))
-        if len(prnt) > (TERM_ROW - 9):
-            prnt = prnt[:(TERM_ROW - 9)] + "..."
-        print(prnt, end='')
-        sys.stdout.flush()
-        html = goto(url=url)
+    try:
+        base_url = url
+        time_out, disallow = robot_read(base_url)
+        pages, gone_to, to_go = [], set(), set()
+        while True:
+            print("\r" + " " * (TERM_ROW - 3), end='')
+            prnt = "\r:: Scraping {}".format(
+                url.encode('ascii', 'ignore').decode('ascii'))
+            if len(prnt) > (TERM_ROW - 9):
+                prnt = prnt[:(TERM_ROW - 9)] + "..."
+            print(prnt, end='')
+            sys.stdout.flush()
+            html = goto(url=url)
 
-        if html is None:
-            url = to_go.pop()
-            gone_to.add(url)
-            slp(time_out)
-            continue
+            if html is None:
+                url = to_go.pop()
+                gone_to.add(url)
+                slp(time_out)
+                continue
 
-        hrefs = get_hrefs(html)
-        hrefs = hrefs - disallow
-        if ignore:
-            for ign in ignore:
-                hrefs = hrefs - match(hrefs, ign)
-        matched = on_site_only(base_url, map(
-            lambda x: validate_url(base_url, x), match(hrefs, schema)))
-        found = match(matched, find)
-        log.info("Found : {}, matched against : {}.".format(
-                 len(found), len(matched)))
-        log.debug("find : {}, match : {}".format(found, matched))
-        if found:
-            pages.append(url)
+            hrefs = get_hrefs(html)
+            hrefs = hrefs - disallow
+            if ignore:
+                for ign in ignore:
+                    hrefs = hrefs - match(hrefs, ign)
+            matched = set(map(lambda x: validate_url(base_url, x), match(hrefs, schema)))
+            found = match(matched, find)
+            matched = on_site_only(base_url, matched)
+            log.info("Found : {}, matched against : {}.".format(
+                     len(found), len(matched)))
+            log.debug("find : {}, match : {}".format(found, matched))
+            if found:
+                pages.append(url)
 
-        to_go |= (matched - gone_to)
-        log.info("Urls to check : {}, Urls checked : {}".format(
-                 len(to_go), len(gone_to)))
-        log.debug("to_go : {}, gone_to : {}".format(to_go, gone_to))
-        try:
-            url = to_go.pop()
-            gone_to.add(url)
-            slp(time_out)
-        except KeyError:
-            break
-        if test:
-            print(find)
-            print(gone_to)
-            print(to_go)
-            break
+            to_go |= (matched - gone_to)
+            log.info("Urls to check : {}, Urls checked : {}".format(
+                     len(to_go), len(gone_to)))
+            log.debug("to_go : {}, gone_to : {}".format(to_go, gone_to))
+            try:
+                url = to_go.pop()
+                gone_to.add(url)
+                slp(time_out)
+            except KeyError:
+                break
+            if test:
+                print(find)
+                print(gone_to)
+                print(to_go)
+                break
+    except KeyboardInterrupt:
+        pass
     return pages
 
 
 def robot_read(base_url):
-    t_out, disallow = 5, set()
+    t_out, disallow = 2.5, set()
     html = goto('/'.join(base_url.split('/') + ["robots.txt"]))
     for line in html.split('\n'):
         if "Crawl-delay:" == line[:12]:
             t_out = int(line[12:])
         elif "Disallow" in line and "#" not in line:
             disallow.add(validate_url(base_url,
-                         line.strip(" \n").split(" ")[-1]))
+                         line.strip("^M \n").split(" ")[-1]))
     log.info("Robots.txt found. Setting timeout to {}".format(t_out))
     log.info("Disallowing : {}".format(" ".join(disallow)))
     slp(t_out)
