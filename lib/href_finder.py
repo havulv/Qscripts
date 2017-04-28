@@ -24,7 +24,6 @@ from requests.exceptions import MissingSchema, ConnectionError
 
 TERM_ROW, TERM_COL = os.get_terminal_size()
 
-BAN_FTYPES = [".pdf", ".css", ".mp4", ".jpg", ".png", ".svg", ".ico"]
 LOG_DIR = os.path.join(os.getcwd(), os.path.normpath("log/"))
 
 if not os.path.exists(LOG_DIR):
@@ -100,7 +99,7 @@ def connection_errors(func):
 
 
 def reg_compiler(string):
-    return re.compile('(' + string.strip("\" ") + ')')
+    return re.compile('(' + string.strip("\" ").replace(".", '\.') + ')')
 
 
 @connection_errors
@@ -131,24 +130,28 @@ def get_tags(tag, text):
 
 # TODO Refactor
 def match(hrefs, schema):
+    '''
+        Matches hrefs against a regex -> schema
+
+        This was originally a really hacky way of banning the bot
+        from going to specific URLs (media, etc.) but, I have
+        refactored so that the bot will never visit a URL with a
+        file extension that is less than 4 characters. So the bot
+        will still visit .html, but not .css or .js
+
+        This can still be refactored further, as the idiom below is shit
+    '''
     log.debug("Matching {} against {}".format(hrefs, schema))
     retval = set()
     try:
         iter_schema = iter(schema)
     except TypeError:
         retval = set(filter(
-            lambda x: re.search(schema, x) and x[:7] != "mailto:" and
-            (x[-4:] not in BAN_FTYPES) and (".png" not in x) and
-            (".jpg" not in x) and (".svg" not in x) and
-            (".jpeg" not in x), hrefs))
+            lambda x: re.search(schema, x) and x[:7] != "mailto:", hrefs))
     else:
         for i in iter_schema:
             for j in filter(
-                    lambda x: re.search(i, x) and
-                    x[:7] != "mailto:" and
-                    (x[-4:] not in BAN_FTYPES) and (".png" not in x) and
-                    (".jpg" not in x) and (".svg" not in x) and
-                    (".jpeg" not in x), hrefs):
+                    lambda x: re.search(i, x) and x[:7] != "mailto:", hrefs):
                 retval.add(j)
 
     return retval
@@ -173,7 +176,8 @@ def validate_url(base_url, addendum):
 
 
 def on_site_only(base_url, urls):
-    return set(filter(lambda x: x[:len(base_url)] == base_url, urls))
+    return set(filter(lambda x: x[:len(base_url)] == base_url,
+                      filter(lambda x: "." not in x[-4:], urls)))
 
 
 def get_elements(outfile, tag):
@@ -197,8 +201,10 @@ def get_elements(outfile, tag):
 # TODO test run time on standard site with and without broken out
 
 # Consider doing this with coroutines. That is, wait until the request
-# comes in and then (while sifting through the response) call next for
-# the next request
+# comes in, pass the source to another thread, wait the main thread,
+# and then sift through the response in the secondary thread
+# Could run into problems with requests blocking behavior.
+#   i.e. does it block across all threads?
 @ctrl_c
 def loop(url, find, schema, ignore, test=False):
     try:
