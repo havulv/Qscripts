@@ -8,7 +8,12 @@
         -extend to arbitrary element/tag
         -Document
         -Combine this with other requests modules in this directory
-        -Allow to pick up multiple hrefs/elements/tags on a page
+
+    FIXME:
+        -Refactor everything, this entire thing is terrible
+
+    POSITIVES:
+        -Although the code is terrible, the logic is relatively straightforward
 '''
 
 from time import sleep as slp
@@ -69,19 +74,17 @@ def connection_correct(func, *args, tries=0, **kwargs):
                 print("There was no url keyword supplied."
                       "Please refactor your code")
                 raise e
-        log.debug("Retrying url as {}".format(kwargs['url']))
+        wait = 4
+        while wait > 0:
+            log.debug("Sleeping until retry")
+            slp(1)
+            wait -= 1
+
+        log.info("Retrying url as {}".format(kwargs['url']))
         func_ret = connection_correct(
             func, *args,
             tries=(tries + 1), **kwargs)
     return func_ret
-
-
-'''
-    Note: There is the possibility that someone could overload tries so
-    that connection_correct will automatically call it's exception. This
-    should only happen if someone passes "tries" as a keyword through a
-    decorated function.
-'''
 
 
 def ctrl_c(func):
@@ -99,7 +102,8 @@ def connection_errors(func):
 
 
 def reg_compiler(string):
-    return re.compile('(' + string.strip("\" ").replace(".", '\.') + ')')
+    return re.compile(
+        '(' + string.strip("\" ").replace(".", "\.").replace("/", "\/") + ')')
 
 
 @connection_errors
@@ -207,10 +211,10 @@ def get_elements(outfile, tag):
 #   i.e. does it block across all threads?
 @ctrl_c
 def loop(url, find, schema, ignore, test=False):
+    pages, gone_to, to_go = [[] for i in range(len(find))], set(), set()
     try:
         base_url = url
         time_out, disallow = robot_read(base_url)
-        pages, gone_to, to_go = [], set(), set()
         while True:
             print("\r" + " " * (TERM_ROW - 3), end='')
             prnt = "\r:: Scraping {}".format(
@@ -233,14 +237,15 @@ def loop(url, find, schema, ignore, test=False):
                 for ign in ignore:
                     hrefs = hrefs - match(hrefs, ign)
             matched = set(map(lambda x: validate_url(base_url, x), match(hrefs, schema)))
-            found = match(matched, find)
-            matched = on_site_only(base_url, matched)
-            log.info("Found : {}, matched against : {}.".format(
-                     len(found), len(matched)))
-            log.debug("find : {}, match : {}".format(found, matched))
-            if found:
-                pages.append(url)
+            for ind, finder in enumerate(find):
+                found = match(matched, finder)
+                if found:
+                    pages[ind].append(url)
+                log.info("Found : {}, matched against : {}.".format(
+                    len(found), len(matched)))
+                log.debug("find : {}, match : {}".format(found, matched))
 
+            matched = on_site_only(base_url, matched)
             to_go |= (matched - gone_to)
             log.info("Urls to check : {}, Urls checked : {}".format(
                      len(to_go), len(gone_to)))
@@ -277,7 +282,7 @@ def robot_read(base_url):
 
 
 def write_to(out, pages):
-    print("\n:: Writing to file")
+    print("\n:: Writing to file {}.csv".format(out))
     sheet = open(out + ".csv", 'w', newline="")
     log.info("Writing to file {}.csv".format(out))
     writer = csv.writer(sheet)
@@ -322,13 +327,19 @@ def main():
         else:
             ignore = None
         if options.fname:
-            pages = loop(
-                base, list(map(reg_compiler, read_csv(options.fname[0]))),
-                schema, ignore, test=options.test)
-            outfile = "{}_results".format(options.fname[0].split(".")[0])
-            write_to(outfile, pages)
+            urls = list(map(reg_compiler, read_csv(options.fname[0])))
+            pages = loop(base, urls, schema, ignore, test=options.test)
+            for url, data in zip(urls, pages):
+                clean_url = url.__repr__().split('\\\\/')
+                if clean_url[-1] == ")')":
+                    outfile = "{}_results".format(
+                        "url_" + clean_url[-2])
+                else:
+                    outfile = "{}_results".format(
+                        "url_" + clean_url[-1].replace(")')", ""))
+                write_to(outfile, data)
         else:
-            pages = loop(base, reg_compiler(options.find[0]), schema, ignore, test=options.test)
+            pages = loop(base, [reg_compiler(options.find[0])], schema, ignore, test=options.test)
             write_to(options.outfile[0], pages)
 
     print(":: Exiting Program.")
