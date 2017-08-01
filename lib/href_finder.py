@@ -1,38 +1,39 @@
 #!/usr/bin/env python3
 
 '''
-    A general spider for searching for a specific url within a set of structured urls
+    HREF Finder
+      -+- By John Andersen -+-
+      -+- November 2016?   -+-
+
+    A general scraper for searching for a specific urls on a single site
+        Gives a csv of pages on which the url appears, and obeys a site's
+        robots.txt to a certain point.
 
     TODO:
-        -Introduce logging to handle offsite emails etc.
-        -extend to arbitrary element/tag
-        -Document
-        -Combine this with other requests modules in this directory
-
-    FIXME:
-        -Refactor everything, this entire thing is terrible
-
-    POSITIVES:
-        -Although the code is terrible, the logic is relatively straightforward
+        - Extend to arbitrary element/tag
 '''
 
-from time import sleep as slp
-import logging as log
-import requests
-import argparse
 import re
 import csv
 import os
 import sys
-from bs4 import BeautifulSoup as bs
+import requests
 from requests.exceptions import MissingSchema, ConnectionError
 
+import argparse
+import logging as log
+from time import sleep as slp
+from bs4 import BeautifulSoup as bs
+
+# Grab the terminal size for output
 TERM_ROW, TERM_COL = os.get_terminal_size()
 
-LOG_DIR = os.path.join(os.getcwd(), os.path.normpath("log/"))
-
+# Create the log directory under ./log/
+LOG_DIR = os.path.join(os.getcwd(), os.path.normpath("log"))
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
+
+# Build on top of existing log file, create if it doesn't exist
 logfile = open(os.path.join(LOG_DIR, "href_find.log"), 'a')
 logfile.close()
 
@@ -41,10 +42,26 @@ log.basicConfig(level=log.DEBUG,
                 format="%(asctime)s [%(levelname)s] ::: %(message)s")
 
 
-# Requires the url to be given as a keyword argument for implementation
-# in more places. There should be a "tries" keyword to support recursion
-# limits
-def connection_correct(func, *args, tries=0, **kwargs):
+''' Begin decorator section '''
+
+
+def connection_correct(func, *args, wait=4, tries=0, **kwargs):
+    '''
+        A function for handling urls that could have been inputted incorrectly.
+            Reads through the the kwargs looking for a 'url' key if there is
+            a connection or schema error, and handles each appropriately.
+
+        Arguments:
+            func        :: A function with a mandatory keyword argument of 'url'
+            *args       :: Arguments to apply
+            tries       :: recursive value for failure -- not to be passed in.
+            wait        :: Time to sleep in between connection requests
+            **kwargs    :: Keyword arguments to apply
+
+        Returns:
+            Completed function return value
+
+    '''
     if tries >= 4:
         raise Exception("Connection correction ultimately failed")
     try:
@@ -56,11 +73,11 @@ def connection_correct(func, *args, tries=0, **kwargs):
                 if isinstance(e, ConnectionError):
                     log.warn(
                         "ConnectionError on {} : {}".format(kwargs['url'], e))
-                    if 's' not in url[0]:
+                    if 's' not in url[0]:  # http be https
                         kwargs['url'] = '/'.join(['https:'] + url[1:])
-                    elif 's' in url[0]:
+                    elif 's' in url[0]:  # https should be http
                         kwargs['url'] = '/'.join(['http:'] + url[1:])
-                    else:
+                    else:  # A different ConnectionError occurred
                         raise e
                 elif isinstance(e, MissingSchema):
                     log.warn("MissingSchema on {} : {}".format(kwargs['url'], e))
@@ -72,42 +89,60 @@ def connection_correct(func, *args, tries=0, **kwargs):
                         raise e
             else:
                 print("There was no url keyword supplied."
-                      "Please refactor your code")
+                      "Connection_correct should not be composed"
+                      " without such a keyword")
                 raise e
-        wait = 4
-        while wait > 0:
-            log.debug("Sleeping until retry")
-            slp(1)
-            wait -= 1
+        log.debug("Sleeping until retry")
+        slp(wait)
 
         log.info("Retrying url as {}".format(kwargs['url']))
+
         func_ret = connection_correct(
-            func, *args,
+            func, *args, wait,
             tries=(tries + 1), **kwargs)
     return func_ret
 
 
-def ctrl_c(func):
-    def wrap(*args, **kwargs):
-        func_ret = func(*args, **kwargs)
-        return func_ret
-    return wrap
-
-
 def connection_errors(func):
+    ''' A decorator for handling connection correction '''
     def wrap_request(*args, **kwargs):
         func_ret = connection_correct(func, *args, **kwargs)
         return func_ret
     return wrap_request
 
 
+''' Helper functions '''
+
+
+# schema must already be regex compiled
+def get_hrefs(text):
+    ''' Retrieve any link that appears on the page '''
+    log.debug("Getting hrefs for previous url")
+    html = bs(text, 'html.parser')
+    hrefs = {tag['href'].strip() for tag in html.find_all(href=True)}
+    return hrefs
+
+
+def get_tags(tag, text):
+    ''' Retrieve the text from any tag '''
+    log.debug("Getting {} for previous url".format(tag))
+    html = bs(text, 'html.parser')
+    elements = [i.contents[0] for i in html.find_all(tag)]
+    return elements
+
+
 def reg_compiler(string):
+    ''' Helper function for cleaning a simple regex string '''
     return re.compile(
         '(' + string.strip("\" ").replace(".", "\.").replace("/", "\/") + ')')
 
 
+''' Logic and data fetching functions '''
+
+
 @connection_errors
 def goto(url="localhost"):
+    ''' Scrape a page with a normal User-Agent '''
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.2; Win64; x64) '
         'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -117,39 +152,19 @@ def goto(url="localhost"):
     return req.text if req.status_code == 200 else None
 
 
-# schema must already be regex compiled
-def get_hrefs(text):
-    log.debug("Getting hrefs for previous url")
-    html = bs(text, 'html.parser')
-    hrefs = {tag['href'].strip() for tag in html.find_all(href=True)}
-    return hrefs
-
-
-def get_tags(tag, text):
-    log.debug("Getting {} for previous url".format(tag))
-    html = bs(text, 'html.parser')
-    elements = [i.contents[0] for i in html.find_all(tag)]
-    return elements
-
-
-# TODO Refactor
 def match(hrefs, schema):
     '''
         Matches hrefs against a regex -> schema
 
-        This was originally a really hacky way of banning the bot
-        from going to specific URLs (media, etc.) but, I have
-        refactored so that the bot will never visit a URL with a
-        file extension that is less than 4 characters. So the bot
-        will still visit .html, but not .css or .js
-
-        This can still be refactored further, as the idiom below is shit
+        Arguments:
+            hrefs   :: An iterable of links or a list/set of links
+            schema  :: The regex that will match against the hrefs
     '''
     log.debug("Matching {} against {}".format(hrefs, schema))
     retval = set()
     try:
         iter_schema = iter(schema)
-    except TypeError:
+    except TypeError:  # Handle an already itered instance
         retval = set(filter(
             lambda x: re.search(schema, x) and x[:7] != "mailto:", hrefs))
     else:
@@ -162,6 +177,7 @@ def match(hrefs, schema):
 
 
 def sift(html, tag):
+    ''' Sift through the html for a specific tag '''
     page = bs(html, 'html.parser')
     tagged = page.find('meta', {'name': tag})
     if not tagged:
@@ -170,8 +186,9 @@ def sift(html, tag):
 
 
 def validate_url(base_url, addendum):
+    ''' Fix urls to absolute paths instead of relative paths '''
     ret_url = addendum
-    # Somehow this seems redundant. Fix later FIXME
+
     if "http" not in addendum:
         b_split = base_url[:-1] if base_url[-1] == '/' else base_url
         ret_url = '/'.join(b_split.split('/') +
@@ -180,18 +197,24 @@ def validate_url(base_url, addendum):
 
 
 def on_site_only(base_url, urls):
+    '''
+        Match urls that are only on the site and do not have
+            3 character file extensions. This is incomplete and
+            needs to handle files that are longer than 3 chars
+    '''
     return set(filter(lambda x: x[:len(base_url)] == base_url,
                       filter(lambda x: "." not in x[-4:], urls)))
 
 
+# Still in testing
 def get_elements(outfile, tag):
+    ''' Read all the hrefs from outfile and fetch the contents of those urls '''
     log.debug("Getting {} at urls listed in {}".format(tag, outfile))
-    href_file = open(outfile + ".csv", "r", newline='')
-    href = []
-    read_csv = csv.reader(href_file)
-    for row in read_csv:
-        href.append([i.strip() for i in row])
-    href_file.close()
+    with open(outfile + ".csv", "r", newline='') as href_file:
+        href = []
+        read_csv = csv.reader(href_file)
+        for row in read_csv:
+            href.append([i.strip() for i in row])
 
     # You are guaranteed to get only one href
     for index, urls in enumerate(href):
@@ -200,73 +223,18 @@ def get_elements(outfile, tag):
     return href
 
 
-# I could clean up some of this logic with functions but, function
-# calls take additional time.
-# TODO test run time on standard site with and without broken out
-
-# Consider doing this with coroutines. That is, wait until the request
-# comes in, pass the source to another thread, wait the main thread,
-# and then sift through the response in the secondary thread
-# Could run into problems with requests blocking behavior.
-#   i.e. does it block across all threads?
-@ctrl_c
-def loop(url, find, schema, ignore, test=False):
-    pages, gone_to, to_go = [[] for i in range(len(find))], set(), set()
-    try:
-        base_url = url
-        time_out, disallow = robot_read(base_url)
-        while True:
-            print("\r" + " " * (TERM_ROW - 3), end='')
-            prnt = "\r:: Scraping {}".format(
-                url.encode('ascii', 'ignore').decode('ascii'))
-            if len(prnt) > (TERM_ROW - 9):
-                prnt = prnt[:(TERM_ROW - 9)] + "..."
-            print(prnt, end='')
-            sys.stdout.flush()
-            html = goto(url=url)
-
-            if html is None:
-                url = to_go.pop()
-                gone_to.add(url)
-                slp(time_out)
-                continue
-
-            hrefs = get_hrefs(html)
-            hrefs = hrefs - disallow
-            if ignore:
-                for ign in ignore:
-                    hrefs = hrefs - match(hrefs, ign)
-            matched = set(map(lambda x: validate_url(base_url, x), match(hrefs, schema)))
-            for ind, finder in enumerate(find):
-                found = match(matched, finder)
-                if found:
-                    pages[ind].append(url)
-                log.info("Found : {}, matched against : {}.".format(
-                    len(found), len(matched)))
-                log.debug("find : {}, match : {}".format(found, matched))
-
-            matched = on_site_only(base_url, matched)
-            to_go |= (matched - gone_to)
-            log.info("Urls to check : {}, Urls checked : {}".format(
-                     len(to_go), len(gone_to)))
-            log.debug("to_go : {}, gone_to : {}".format(to_go, gone_to))
-            try:
-                url = to_go.pop()
-                gone_to.add(url)
-                slp(time_out)
-            except KeyError:
-                break
-            if test:
-                print(find)
-                print(gone_to)
-                print(to_go)
-                break
-    except KeyboardInterrupt:
-        pass
-    return pages
-
-
 def robot_read(base_url):
+    '''
+        Look for time out and disallowed urls on robots.txt
+            Defaults to a timeout of 2.5, and everything allowed
+
+        Arguments:
+            base_url :: the base url off of which to find robots.txt
+
+        Returns:
+            t_out    :: The time out length on which to wait
+            disallow :: The urls that are disallowed
+    '''
     t_out, disallow = 2.5, set()
     html = goto('/'.join(base_url.split('/') + ["robots.txt"]))
     for line in html.split('\n'):
@@ -281,23 +249,106 @@ def robot_read(base_url):
     return t_out, disallow
 
 
+def loop(url, find, schema, ignore, test=False):
+    '''
+        Loop over every url on the site, searching for pages that link
+            to the original page. Return a list of urls on which the listed
+            urls were found.
+        On Ctrl-C (KeyboardInterrupt), pass over the page listed.
+
+        Arguments:
+            url     :: The site url to scrape over
+            find    :: A list of regex strings of what to search for in the tag
+            schema  :: A regex string of what type of pages to scrape
+            ignore  :: A list of regex strings of what pages to ignore
+            test    :: Runs through once, and quits out. Test the url
+
+        Returns:
+            pages   :: The pages on which 'find' showed up
+    '''
+    pages, gone_to, to_go = [[] for i in range(len(find))], set(), set()
+    try:
+        base_url = url
+        time_out, disallow = robot_read(base_url)
+
+        while True:
+            print("\r" + " " * (TERM_ROW - 3), end='')  # Clear terminal
+            prnt = "\r:: Scraping {}".format(
+                url.encode('ascii', 'ignore').decode('ascii'))
+
+            if len(prnt) > (TERM_ROW - 9):
+                prnt = prnt[:(TERM_ROW - 9)] + "..."
+            print(prnt, end='')
+            sys.stdout.flush()
+            html = goto(url=url)
+
+            if html is None:  # Request was bad
+                url = to_go.pop()
+                gone_to.add(url)
+                slp(time_out)
+                continue
+
+            hrefs = get_hrefs(html)
+            hrefs = hrefs - disallow
+            if ignore:  # Ignore based on the schema
+                for ign in ignore:
+                    hrefs = hrefs - match(hrefs, ign)
+
+            # Match against the hrefs and take only unique hrefs
+            matched = set(map(lambda x: validate_url(base_url, x), match(hrefs, schema)))
+            for ind, finder in enumerate(find):
+                found = match(matched, finder)
+                if found:
+                    pages[ind].append(url)
+                log.info("Found : {}, matched against : {}.".format(
+                    len(found), len(matched)))
+                log.debug("find : {}, match : {}".format(found, matched))
+
+            # Find the new urls to scrape and cross off those that are gone to
+            matched = on_site_only(base_url, matched)
+            to_go |= (matched - gone_to)
+            log.info("Urls to check : {}, Urls checked : {}".format(
+                     len(to_go), len(gone_to)))
+            log.debug("to_go : {}, gone_to : {}".format(to_go, gone_to))
+
+            try:
+                url = to_go.pop()
+                gone_to.add(url)
+                slp(time_out)
+            except KeyError:  # to_go is empty
+                break
+
+            if test:  # On test, print results of first url
+                print(find)
+                print(gone_to)
+                print(to_go)
+                break
+
+    except KeyboardInterrupt:  # Pass url on KeyboardInterrupt
+        pass
+    return pages
+
+
 def write_to(out, pages):
+    ''' Write the found pages to the outfile '''
     print("\n:: Writing to file {}.csv".format(out))
-    sheet = open(out + ".csv", 'w', newline="")
-    log.info("Writing to file {}.csv".format(out))
-    writer = csv.writer(sheet)
-    for page in pages:
-        writer.writerow([page])
-    sheet.close()
+
+    with open(out + ".csv", 'w', newline="") as sheet:
+        log.info("Writing to file {}.csv".format(out))
+        writer = csv.writer(sheet)
+        for page in pages:
+            writer.writerow([page])
+
     print(":: File closed.")
 
 
 def read_csv(fname):
+    ''' Read a newline seperated list of urls to search through '''
     urls = None
     if os.path.isfile(fname):
         with open(fname, 'r') as getter:
-            urls = [line.strip(' \n') for line in getter.readlines()]
-        for url in urls:
+            urls = [line.strip(', \n') for line in getter.readlines()]
+        for url in urls:  # Assumes correct url structure
             assert("http" in url)
     else:
         raise FileNotFoundError
@@ -305,16 +356,19 @@ def read_csv(fname):
 
 
 def main():
+    ''' The main function to parse all arguments (through argparse) and control io '''
     options = parse_args()
     log.info("User input :: " + ", ".join(map(" = ".join,
              [[k, str(v)] for k, v in {**vars(options)}.items()])))
     base = options.url[0].strip()
 
+    # Log levels
     if options.debug:
         log.getLogger().setLevel(log.DEBUG)
     else:
         log.getLogger().setLevel(log.INFO)
 
+    # Grab tags, elements, or search for urls
     if options.get_meta[0]:
         pages = [sift(goto(options.url[0].strip()), tag=options.get_meta[0])]
     elif options.getelement[0]:
@@ -322,14 +376,17 @@ def main():
         write_to(options.outfile[0], href_N_tag)
     else:
         schema = reg_compiler(options.schema[0])
-        if options.ignore[0]:
+
+        if options.ignore[0]:  # What to ignore
             ignore = [reg_compiler(ign) for ign in options.ignore]
         else:
             ignore = None
-        if options.fname:
+
+        if options.fname:  # If there is a supplied file: read the urls from it
             urls = list(map(reg_compiler, read_csv(options.fname[0])))
             pages = loop(base, urls, schema, ignore, test=options.test)
-            for url, data in zip(urls, pages):
+
+            for url, data in zip(urls, pages):  # Build outfiles for each url
                 clean_url = url.__repr__().split('\\\\/')
                 if clean_url[-1] == ")')":
                     outfile = "{}_results".format(
@@ -339,13 +396,15 @@ def main():
                         "url_" + clean_url[-1].replace(")')", ""))
                 write_to(outfile, data)
         else:
-            pages = loop(base, [reg_compiler(options.find[0])], schema, ignore, test=options.test)
+            pages = loop(base, [reg_compiler(options.find[0])],
+                         schema, ignore, test=options.test)
             write_to(options.outfile[0], pages)
 
     print(":: Exiting Program.")
 
 
 def parse_args():
+    ''' The argument parser for the module '''
     parser = argparse.ArgumentParser(
         description=("Crawl a domain for a specific hyperlink. Use the"
                      " 'schema' to try and cut down on the run-time"))

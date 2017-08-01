@@ -30,7 +30,7 @@ log.basicConfig(level=log.DEBUG,filename=os.path.join(LOG_DIR, "music.log"),
 # Path for vlc media player. Swap with your favorite shit (ncmpcpp or whatever)
 # But don't forget to update the subprocess call
 VLC_PATH = os.path.normpath(os.path.expanduser('~')+"\\AppData\\"
-                                    "Local\\VLC\\vlc-2.2.4\\vlc.exe")
+                                    "Local\\VLC\\vlc-2.2.6\\vlc.exe")
 SAVE_FILE = os.path.join(LOG_DIR, 'music_urls.log')
 
 def write_urls(func):
