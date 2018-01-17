@@ -4,8 +4,11 @@
     Make all white pixels transparent in an image
 '''
 
-import os, sys
+
+import os
+import sys
 from PIL import Image
+
 
 def get_hex(fname):
     '''
@@ -25,6 +28,7 @@ def get_hex(fname):
     else:
         raise FileNotFoundError
 
+
 def process(item):
     '''
         Monad for stripping the list of triplets of white 0xffffff
@@ -35,10 +39,11 @@ def process(item):
         Returns:
             (ff,ff,ff,0) or item :: sets alpha val to 0
     '''
-    if item[0] == 255 and item[1] == 255 and item[2] == 255:
-        return (255,255,255,0)
+    if item[0] > 135 and item[1] > 135 and item[2] > 135:
+        return (255, 255, 255, 0)
     else:
-        return item
+        return (0, 0, 0, 255)
+
 
 def save_as(fname, img, data):
     '''
@@ -52,7 +57,7 @@ def save_as(fname, img, data):
             Void
     '''
     img.putdata(data)
-    img.save(fname[:-4]+"_trans"+fname[-4:], "PNG")
+    img.save(fname[:-4] + "_trans" + fname[-4:], "PNG")
 
 
 if __name__ == "__main__":
@@ -62,4 +67,4 @@ if __name__ == "__main__":
         save_as(fname, img, list(map(process, data)))
     except (IndexError, FileNotFoundError):
         print("Check that the file exists or that you even typed in a "
-                "filename")
+              "filename")

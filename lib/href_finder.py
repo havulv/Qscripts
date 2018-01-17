@@ -11,6 +11,19 @@
 
     TODO:
         - Extend to arbitrary element/tag
+        - Split functionality into multiple modules and expand into an
+          actual program instead of one messy script
+          General Design
+            - Internals
+               - Parsing of DOM
+               - Handling regexes and searching the DOM
+            - Externals
+               - Handling requests
+               - Correcting for Errors
+            - UI
+               - Handling File I/O
+               - Cleaning Input
+               - Argparsing
 '''
 
 import re
@@ -22,6 +35,7 @@ from requests.exceptions import MissingSchema, ConnectionError
 
 import argparse
 import logging as log
+from copy import deepcopy as dc
 from time import sleep as slp
 from bs4 import BeautifulSoup as bs
 
@@ -45,7 +59,7 @@ log.basicConfig(level=log.DEBUG,
 ''' Begin decorator section '''
 
 
-def connection_correct(func, *args, wait=4, tries=0, **kwargs):
+def connection_correct(func, *args, wait=2, tries=0, **kwargs):
     '''
         A function for handling urls that could have been inputted incorrectly.
             Reads through the the kwargs looking for a 'url' key if there is
@@ -67,7 +81,8 @@ def connection_correct(func, *args, wait=4, tries=0, **kwargs):
     try:
         func_ret = func(*args, **kwargs)
     except (MissingSchema, ConnectionError) as e:
-        for key in kwargs:
+        kwargs_copy = dc(kwargs)
+        for key in kwargs_copy:
             if key == 'url':
                 url = kwargs['url'].split('/')
                 if isinstance(e, ConnectionError):
@@ -95,10 +110,11 @@ def connection_correct(func, *args, wait=4, tries=0, **kwargs):
         log.debug("Sleeping until retry")
         slp(wait)
 
-        log.info("Retrying url as {}".format(kwargs['url']))
+        if 'url' in kwargs['url']:
+            log.info("Retrying url as {}".format(kwargs['url']))
 
         func_ret = connection_correct(
-            func, *args, wait,
+            func, *args, wait + 1,
             tries=(tries + 1), **kwargs)
     return func_ret
 
@@ -120,6 +136,7 @@ def get_hrefs(text):
     log.debug("Getting hrefs for previous url")
     html = bs(text, 'html.parser')
     hrefs = {tag['href'].strip() for tag in html.find_all(href=True)}
+    hrefs = {i.split("?")[0] if '?' in i else i for i in hrefs}
     return hrefs
 
 
@@ -235,21 +252,25 @@ def robot_read(base_url):
             t_out    :: The time out length on which to wait
             disallow :: The urls that are disallowed
     '''
-    t_out, disallow = 2.5, set()
+    t_out, disallow = 2, set()
     html = goto('/'.join(base_url.split('/') + ["robots.txt"]))
-    for line in html.split('\n'):
-        if "Crawl-delay:" == line[:12]:
-            t_out = int(line[12:])
-        elif "Disallow" in line and "#" not in line:
-            disallow.add(validate_url(base_url,
-                         line.strip("^M \n").split(" ")[-1]))
-    log.info("Robots.txt found. Setting timeout to {}".format(t_out))
-    log.info("Disallowing : {}".format(" ".join(disallow)))
+    try:
+        for line in html.split('\n'):
+            if "Crawl-delay:" == line[:12]:
+                t_out = int(line[12:])
+            elif "Disallow" in line and "#" not in line:
+                disallow.add(validate_url(base_url,
+                             line.strip("^M \n").split(" ")[-1]))
+        log.info("Robots.txt found. Setting timeout to {}".format(t_out))
+        log.info("Disallowing : {}".format(" ".join(disallow)))
+    except AttributeError:
+        t_out = 3  # Big site means actual pages instead of pure 404s
+    print("The time for sleep is: ", t_out)
     slp(t_out)
     return t_out, disallow
 
 
-def loop(url, find, schema, ignore, test=False):
+def loop(url, find, schema, ignore, test=False, start=None):
     '''
         Loop over every url on the site, searching for pages that link
             to the original page. Return a list of urls on which the listed
@@ -271,6 +292,9 @@ def loop(url, find, schema, ignore, test=False):
         base_url = url
         time_out, disallow = robot_read(base_url)
 
+        if start is not None:
+            url = start
+
         while True:
             print("\r" + " " * (TERM_ROW - 3), end='')  # Clear terminal
             prnt = "\r:: Scraping {}".format(
@@ -280,13 +304,20 @@ def loop(url, find, schema, ignore, test=False):
                 prnt = prnt[:(TERM_ROW - 9)] + "..."
             print(prnt, end='')
             sys.stdout.flush()
-            html = goto(url=url)
+            try:
+                html = goto(url)
+            except Exception as e:
+                print("\n" + repr(e) + "\n")
+                html = None
 
             if html is None:  # Request was bad
-                url = to_go.pop()
-                gone_to.add(url)
-                slp(time_out)
-                continue
+                try:
+                    url = to_go.pop()
+                    gone_to.add(url)
+                    slp(time_out)
+                    continue
+                except KeyError:
+                    break  # SOMETHING IS WRONG!! RUNFORYOURLIVES!!!
 
             hrefs = get_hrefs(html)
             hrefs = hrefs - disallow
@@ -319,9 +350,11 @@ def loop(url, find, schema, ignore, test=False):
                 break
 
             if test:  # On test, print results of first url
-                print(find)
-                print(gone_to)
-                print(to_go)
+                from pprint import pprint
+                print("")
+                pprint(find)
+                pprint(gone_to)
+                pprint(to_go)
                 break
 
     except KeyboardInterrupt:  # Pass url on KeyboardInterrupt
@@ -361,6 +394,15 @@ def main():
     log.info("User input :: " + ", ".join(map(" = ".join,
              [[k, str(v)] for k, v in {**vars(options)}.items()])))
     base = options.url[0].strip()
+    start = None
+
+    if not ((base[-1] == '/' and base.count('/') == 3) or
+            (base[-1] != '/' and base.count('/') == 2)):
+        try:
+            start = base
+            base = '/'.join(base.split('/')[:3])
+        except IndexError:
+            raise argparse.ArgumentTypeError
 
     # Log levels
     if options.debug:
@@ -384,9 +426,15 @@ def main():
 
         if options.fname:  # If there is a supplied file: read the urls from it
             urls = list(map(reg_compiler, read_csv(options.fname[0])))
-            pages = loop(base, urls, schema, ignore, test=options.test)
+            try:
+                pages = loop(base, urls, schema, ignore, test=options.test)
+            except Exception:
+                print("Exception caught in loop. ",
+                      "Exiting out and writing available data to files.")
+                pass
 
             for url, data in zip(urls, pages):  # Build outfiles for each url
+
                 clean_url = url.__repr__().split('\\\\/')
                 if clean_url[-1] == ")')":
                     outfile = "{}_results".format(
@@ -394,11 +442,16 @@ def main():
                 else:
                     outfile = "{}_results".format(
                         "url_" + clean_url[-1].replace(")')", ""))
-                write_to(outfile, data)
+#  What the fuck was I thinking? Why the FUCK does this code exist? Why is there no conditional before it?
+#                for i in ['facebook', 'twitter', 'instagram', 'linkedin']:
+#                    print(url, i)
+#                    if i in str(url):
+#                        outfile = i + "_" + outfile
+                write_to(outfile.replace("\\", "").replace(".", ""), data)
         else:
             pages = loop(base, [reg_compiler(options.find[0])],
-                         schema, ignore, test=options.test)
-            write_to(options.outfile[0], pages)
+                         schema, ignore, test=options.test, start=start)
+            write_to(options.outfile[0], pages[0])
 
     print(":: Exiting Program.")
 
